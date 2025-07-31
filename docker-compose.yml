@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: S5.02.Virtual_Pet_Web_Aplication_Postgres
+    restart: always
+    environment:
+      POSTGRES_DB: VirtualPetWebApplication_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dev-network
+
+volumes:
+  postgres_data:
+
+networks:
+  dev-network:
