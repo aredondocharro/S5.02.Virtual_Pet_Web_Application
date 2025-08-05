@@ -5,6 +5,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CollectionId;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Setter
 @Getter
 @Builder
@@ -33,4 +36,10 @@ public class UserEntity {
 
     @Column(name = "account_non_locked")
     private boolean accountNonLocked;
+
+    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @JoinTable (name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Set<RoleEntity> roles = new HashSet<>();
 }
