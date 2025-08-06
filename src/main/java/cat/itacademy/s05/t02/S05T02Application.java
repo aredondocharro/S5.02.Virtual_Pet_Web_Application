@@ -10,6 +10,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.util.List;
 import java.util.Set;
 
 @SpringBootApplication
@@ -66,11 +67,50 @@ public class S05T02Application {
 					.accountNonExpired(true)
 					.credentialsNonExpired(true)
 					.accountNonLocked(true)
-					.roles(Set.of(roleAdmin, roleUser))
+					.roles(Set.of(roleAdmin))
 					.build();
+
+			UserEntity userJohn = UserEntity.builder()
+					.username("john")
+					.password("1234")
+					.isEnabled(true)
+					.accountNonExpired(true)
+					.credentialsNonExpired(true)
+					.accountNonLocked(true)
+					.roles(Set.of(roleUser))
+					.build();
+
+			UserEntity userAlice = UserEntity.builder()
+					.username("alice")
+					.password("1234")
+					.isEnabled(true)
+					.accountNonExpired(true)
+					.credentialsNonExpired(true)
+					.accountNonLocked(true)
+					.roles(Set.of(roleDeveloper))
+					.build();
+
+			UserEntity userBob = UserEntity.builder()
+					.username("bob")
+					.password("1234")
+					.isEnabled(true)
+					.accountNonExpired(true)
+					.credentialsNonExpired(true)
+					.accountNonLocked(true)
+					.roles(Set.of(roleGuest))
+					.build();
+
+			UserEntity userCharlie = UserEntity.builder()
+					.username("charlie")
+					.password("1234")
+					.isEnabled(true)
+					.accountNonExpired(true)
+					.credentialsNonExpired(true)
+					.accountNonLocked(true)
+					.roles(Set.of(roleTester))
+					.build();
+			// Save users to the repository
+			userRepository.saveAll(List.of(userAlex, userJohn, userAlice, userBob, userCharlie));
 		};
 	}
-
-
-
 }
