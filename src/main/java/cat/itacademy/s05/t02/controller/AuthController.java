@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("denyAll()") // Deny all access by default
 public class AuthController {
 
-    @GetMapping("/hello")
+/*    @GetMapping("/hello")
     @PreAuthorize("permitAll()") // Allow public access to this endpoint
     public String hello() {
         return "Hello, welcome to the Virtual Pet!";
@@ -19,5 +19,28 @@ public class AuthController {
     @PreAuthorize("hasAuthority('READ')") // Allow access only to users with 'READ' authority
     public String helloSecured() {
         return "Hello, welcome to the Virtual Pet Secured!";
+    }*/
+
+    @GetMapping("/get")
+    @PreAuthorize("hasAuthority('READ')")
+    public String get() {
+        return "This is a GET request";
+    }
+    @GetMapping("/post")
+    @PreAuthorize("hasAuthority('CREATE')")
+    public String post() {
+        return "This is a POST request";
+    }
+    @GetMapping("/put")
+    public String put() {
+        return "This is a PUT request";
+    }
+    @GetMapping("/delete")
+    public String delete() {
+        return "This is a DELETE request";
+    }
+    @GetMapping("/patch")
+    public String patch() {
+        return "This is a PATCH request";
     }
 }

@@ -62,7 +62,7 @@ public class S05T02Application {
 			//Create users
 			UserEntity userAlex = UserEntity.builder()
 					.username("alex")
-					.password("1234")
+					.password("$2a$10$NhrOC1UjeF6YoKq/ndOiAubnkJtGaoYDUQs6M9AYQTD3bkl1BLiB")
 					.isEnabled(true)
 					.accountNonExpired(true)
 					.credentialsNonExpired(true)
@@ -72,7 +72,7 @@ public class S05T02Application {
 
 			UserEntity userJohn = UserEntity.builder()
 					.username("john")
-					.password("1234")
+					.password("$2a$10$NhrOC1UjeF6YoKq/ndOiAubnkJtGaoYDUQs6M9AYQTD3bkl1BLiB")
 					.isEnabled(true)
 					.accountNonExpired(true)
 					.credentialsNonExpired(true)
@@ -82,7 +82,7 @@ public class S05T02Application {
 
 			UserEntity userAlice = UserEntity.builder()
 					.username("alice")
-					.password("1234")
+					.password("$2a$10$NhrOC1UjeF6YoKq/ndOiAubnkJtGaoYDUQs6M9AYQTD3bkl1BLiB")
 					.isEnabled(true)
 					.accountNonExpired(true)
 					.credentialsNonExpired(true)
@@ -92,7 +92,7 @@ public class S05T02Application {
 
 			UserEntity userBob = UserEntity.builder()
 					.username("bob")
-					.password("1234")
+					.password("$2a$10$NhrOC1UjeF6YoKq/ndOiAubnkJtGaoYDUQs6M9AYQTD3bkl1BLiB")
 					.isEnabled(true)
 					.accountNonExpired(true)
 					.credentialsNonExpired(true)
@@ -102,7 +102,7 @@ public class S05T02Application {
 
 			UserEntity userCharlie = UserEntity.builder()
 					.username("charlie")
-					.password("1234")
+					.password("$2a$10$NhrOC1UjeF6YoKq/ndOiAubnkJtGaoYDUQs6M9AYQTD3bkl1BLiB")
 					.isEnabled(true)
 					.accountNonExpired(true)
 					.credentialsNonExpired(true)
