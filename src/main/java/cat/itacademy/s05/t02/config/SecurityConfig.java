@@ -39,7 +39,12 @@ public class SecurityConfig {
                     // Configure public endpoints
                         http.requestMatchers(HttpMethod.POST, "/auth/**").permitAll();
                             // Configure secured endpoints
-                            http.requestMatchers("/auth/hello-secured").hasAnyAuthority("READ");
+                            http.requestMatchers(HttpMethod.GET, "/app/get").hasAnyRole("ADMIN", "USER");
+                                    http.requestMatchers(HttpMethod.POST, "/app/post").hasAnyRole("ADMIN", "DEVELOPER");
+                                    http.requestMatchers(HttpMethod.PUT, "/app/put").hasAnyRole("ADMIN","DEVELOPER");
+                                    http.requestMatchers(HttpMethod.DELETE, "/app/delete").hasRole("ADMIN");
+                                    http.requestMatchers(HttpMethod.PATCH, "/app/patch").hasAnyRole("ADMIN","TESTER");
+                                    //.requestMatchers("/app/**").authenticated(); // Require authentication for all other app endpoints
                             // Configure the rest of the application
                             http.anyRequest().denyAll(); // Deny all other requests
                 })
