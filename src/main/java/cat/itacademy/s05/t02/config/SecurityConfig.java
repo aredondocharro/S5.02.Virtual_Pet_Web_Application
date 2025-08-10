@@ -6,6 +6,7 @@ import cat.itacademy.s05.t02.util.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -15,54 +16,33 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
 
-
+    @Autowired
     private JwtUtils jwtUtils;
-
-    public SecurityConfig(JwtUtils jwtUtils) {
-        this.jwtUtils = jwtUtils;
-    }
-
-/*    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        return httpSecurity
-                .csrf(csrf -> csrf.disable()) // Disable CSRF for simplicity, not recommended for production
-                .httpBasic(Customizer.withDefaults()) // Enable HTTP Basic authentication
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Stateless session management
-                .authorizeHttpRequests(auth -> auth
-                        // Configure public endpoints
-                        .requestMatchers("/auth/hello").permitAll() // Allow public access to /auth/hello
-                        // Configure secured endpoints
-                        .requestMatchers("/auth/hello-secured").hasAnyAuthority("READ") // Secure /auth/hello-secured
-                        // Configure the rest of the application
-                        .anyRequest().denyAll() // Deny all other requests
-                )
-                .build();
-    }*/
 
    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(csrf -> csrf.disable()) // Disable CSRF for simplicity, not recommended for production
-                .httpBasic(Customizer.withDefaults()) // Enable HTTP Basic authentication
+                .httpBasic(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(http -> {
+                    // Configure public endpoints
+                        http.requestMatchers(HttpMethod.POST, "/auth/**").permitAll();
+                            // Configure secured endpoints
+                            http.requestMatchers("/auth/hello-secured").hasAnyAuthority("READ");
+                            // Configure the rest of the application
+                            http.anyRequest().denyAll(); // Deny all other requests
+                })
                 .addFilterBefore(new JwtTokenValidator(jwtUtils), BasicAuthenticationFilter.class)
                 .build();
     }
@@ -83,8 +63,7 @@ public class SecurityConfig {
 
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(); // Use BCryptPasswordEncoder for production
     }
-
 }

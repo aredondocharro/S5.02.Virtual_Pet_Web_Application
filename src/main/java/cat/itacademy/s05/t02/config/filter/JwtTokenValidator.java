@@ -1,6 +1,7 @@
 package cat.itacademy.s05.t02.config.filter;
 
 import cat.itacademy.s05.t02.util.JwtUtils;
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,12 +19,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
+
 
 public class JwtTokenValidator extends OncePerRequestFilter {
 
-    private JwtUtils jwtUtils;
-
+    private final JwtUtils jwtUtils;
 
     public JwtTokenValidator(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
@@ -34,23 +34,36 @@ public class JwtTokenValidator extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        String jwtToken = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if(jwtToken != null){
-            jwtToken = jwtToken.substring(7);
-            DecodedJWT decodedJWT = jwtUtils.validateToken(jwtToken);
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-            String username = jwtUtils.extractUsername(decodedJWT);
-            String stringAuthorities = jwtUtils.getSpecificClaim(decodedJWT, "authorities").asString();
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwtToken = authHeader.substring("Bearer ".length()).trim();
+            try {
+                DecodedJWT decodedJWT = jwtUtils.validateToken(jwtToken);
 
-            Collection<? extends GrantedAuthority> authorities = AuthorityUtils.commaSeparatedStringToAuthorityList(stringAuthorities);
+                String username = jwtUtils.extractUsername(decodedJWT);
 
-            SecurityContext context = SecurityContextHolder.getContext();
-            Authentication authentication = new UsernamePasswordAuthenticationToken(username, null, authorities);
-            context.setAuthentication(authentication);
+                String stringAuthorities = decodedJWT.getClaim("authorities").asString();
+                if (stringAuthorities == null) stringAuthorities = "";
 
-            SecurityContextHolder.setContext(context);
+                Collection<? extends GrantedAuthority> authorities =
+                        AuthorityUtils.commaSeparatedStringToAuthorityList(stringAuthorities);
 
+                Authentication authentication =
+                        new UsernamePasswordAuthenticationToken(username, null, authorities);
+
+                SecurityContext context = SecurityContextHolder.createEmptyContext();
+                context.setAuthentication(authentication);
+                SecurityContextHolder.setContext(context);
+
+            } catch (JWTVerificationException ex) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\":\"Invalid JWT: " + ex.getMessage() + "\"}");
+                return;
+            }
         }
+
         filterChain.doFilter(request, response);
     }
 }

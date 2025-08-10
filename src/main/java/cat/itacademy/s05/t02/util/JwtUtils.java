@@ -28,44 +28,46 @@ public class JwtUtils {
     public String createToken(Authentication authentication){
         Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
 
-        String username = authentication.getPrincipal().toString();
+        String username = authentication.getName();
 
         String authorities = authentication.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(","));
+                .collect(Collectors.joining(",")); // p.ej. "ROLE_USER,READ"
 
-        String jwtToken = JWT.create()
+        return JWT.create()
                 .withIssuer(this.userGenerator)
                 .withSubject(username)
                 .withClaim("authorities", authorities)
                 .withIssuedAt(new Date())
-                .withExpiresAt(new Date(System.currentTimeMillis()+ 1800000))
+                .withExpiresAt(new Date(System.currentTimeMillis() + 1800000)) // 30 min
                 .withJWTId(UUID.randomUUID().toString())
                 .withNotBefore(new Date(System.currentTimeMillis()))
                 .sign(algorithm);
-        return jwtToken;
-
     }
 
     public DecodedJWT validateToken(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
+
             JWTVerifier verifier = JWT.require(algorithm)
                     .withIssuer(this.userGenerator)
+                    .acceptLeeway(3) // ✅ margen para nbf/exp (segundos)
                     .build();
-            verifier.verify(token);
+
 
             return verifier.verify(token);
 
-        } catch (JWTVerificationException exception) {
-            throw  new JWTVerificationException("Token is not valid, not authorized access");
+        } catch (JWTVerificationException e) {
+
+            throw new JWTVerificationException("Token is not valid: " + e.getMessage(), e);
         }
     }
 
     public String extractUsername(DecodedJWT decodedJWT){
-        return decodedJWT.getSubject().toString();
+        return decodedJWT.getSubject();
     }
+
     public Claim getSpecificClaim(DecodedJWT decodedJWT, String claimName) {
         return decodedJWT.getClaim(claimName);
     }

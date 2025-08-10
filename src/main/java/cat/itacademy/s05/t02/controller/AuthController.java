@@ -1,46 +1,24 @@
 package cat.itacademy.s05.t02.controller;
 
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import cat.itacademy.s05.t02.controller.dto.AuthLoginRequest;
+import cat.itacademy.s05.t02.controller.dto.AuthResponse;
+import cat.itacademy.s05.t02.service.UserDetailServiceImpl;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@PreAuthorize("denyAll()") // Deny all access by default
 public class AuthController {
 
-/*    @GetMapping("/hello")
-    @PreAuthorize("permitAll()") // Allow public access to this endpoint
-    public String hello() {
-        return "Hello, welcome to the Virtual Pet!";
-    }
-    @GetMapping("/hello-secured")
-    @PreAuthorize("hasAuthority('READ')") // Allow access only to users with 'READ' authority
-    public String helloSecured() {
-        return "Hello, welcome to the Virtual Pet Secured!";
-    }*/
+    @Autowired
+    private UserDetailServiceImpl userDetailService;
 
-    @GetMapping("/get")
-    @PreAuthorize("hasAuthority('READ')")
-    public String get() {
-        return "This is a GET request";
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody @Valid AuthLoginRequest userRequest) {
+         return new ResponseEntity<>(this.userDetailService.loginUser(userRequest),HttpStatus.OK);
     }
-    @GetMapping("/post")
-    @PreAuthorize("hasAuthority('CREATE')")
-    public String post() {
-        return "This is a POST request";
-    }
-    @GetMapping("/put")
-    public String put() {
-        return "This is a PUT request";
-    }
-    @GetMapping("/delete")
-    public String delete() {
-        return "This is a DELETE request";
-    }
-    @GetMapping("/patch")
-    public String patch() {
-        return "This is a PATCH request";
-    }
+
 }
