@@ -1,5 +1,6 @@
 package cat.itacademy.s05.t02.controller;
 
+import cat.itacademy.s05.t02.controller.dto.AuthCreateUserRequest;
 import cat.itacademy.s05.t02.controller.dto.AuthLoginRequest;
 import cat.itacademy.s05.t02.controller.dto.AuthResponse;
 import cat.itacademy.s05.t02.service.UserDetailServiceImpl;
@@ -15,6 +16,11 @@ public class AuthController {
 
     @Autowired
     private UserDetailServiceImpl userDetailService;
+
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponse> register(@RequestBody @Valid AuthCreateUserRequest authCreateUser) {
+        return new ResponseEntity<>(this.userDetailService.createUser(authCreateUser), HttpStatus.CREATED);
+    }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid AuthLoginRequest userRequest) {
