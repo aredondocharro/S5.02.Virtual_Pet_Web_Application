@@ -24,18 +24,14 @@ public class SeedService {
 
     @Transactional
     public void seedRolesAndPermissions() {
-        // 1) UPSERT permisos (quedan managed dentro de la misma TX)
+
         PermissionEntity pCreate = upsertPermission("CREATE");
         PermissionEntity pRead   = upsertPermission("READ");
         PermissionEntity pUpdate = upsertPermission("UPDATE");
         PermissionEntity pDelete = upsertPermission("DELETE");
 
-        // 2) UPSERT roles referenciando permisos MANAGED (reattach por nombre)
         upsertRole(RoleEnum.ADMIN,     Set.of("CREATE","READ","UPDATE","DELETE"));
-        upsertRole(RoleEnum.USER,      Set.of("READ","UPDATE"));
-        upsertRole(RoleEnum.GUEST,     Set.of("READ"));
-        upsertRole(RoleEnum.DEVELOPER, Set.of("CREATE","READ","UPDATE"));
-        upsertRole(RoleEnum.TESTER,    Set.of("READ","UPDATE","DELETE"));
+        upsertRole(RoleEnum.USER,      Set.of("READ","CREATE"));
     }
 
     private PermissionEntity upsertPermission(String name) {
@@ -46,7 +42,6 @@ public class SeedService {
     private void upsertRole(RoleEnum roleEnum, Set<String> permissionNames) {
         if (roleRepository.findByRoleEnum(roleEnum).isPresent()) return;
 
-        // Reobtener permisos MANAGED dentro de la misma transacción
         Set<PermissionEntity> managedPerms = permissionNames.stream()
                 .map(n -> permissionRepository.findByName(n).orElseThrow())
                 .collect(Collectors.toSet());
