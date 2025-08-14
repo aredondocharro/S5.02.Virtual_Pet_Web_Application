@@ -42,6 +42,11 @@ security:
       generator: ${JWT_ISSUER:AUTH0JWT-BACKEND}
     exp-minutes: ${JWT_EXP_MINUTES:30}
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+    operationsSorter: alpha
+    tagsSorter: alpha
 ---
 spring:
   config:
