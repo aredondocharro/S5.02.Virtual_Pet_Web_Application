@@ -31,29 +31,25 @@ public class JwtUtils {
     private long expMinutes;
 
     public String createToken(Authentication authentication){
-        Algorithm algorithm = Algorithm.HMAC256(secret);
+        Algorithm algorithm = Algorithm.HMAC256(this.secret);
 
-        String subject = authentication.getName(); // ahora es el email
+        String subject = authentication.getName(); // tu email
+        String[] authorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority) // ej: ROLE_USER, READ
+                .toArray(String[]::new);
 
-        // Mejor como array de strings que como CSV
-        List<String> authorities = authentication.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
-        Instant now = Instant.now();
-        Instant exp = now.plus(expMinutes, ChronoUnit.MINUTES);
-
+        long now = System.currentTimeMillis();
         return JWT.create()
-                .withIssuer(issuer)
+                .withIssuer(this.issuer)
                 .withSubject(subject)
-                .withArrayClaim("authorities", authorities.toArray(new String[0]))
-                .withIssuedAt(Date.from(now))
-                .withExpiresAt(Date.from(exp))
-                .withNotBefore(Date.from(now))
-                .withJWTId(UUID.randomUUID().toString())
+                .withArrayClaim("authorities", authorities)   // ← ARRAY
+                .withIssuedAt(new Date(now))
+                .withNotBefore(new Date(now))
+                .withExpiresAt(new Date(now + expMinutes * 60_000))
+                .withJWTId(java.util.UUID.randomUUID().toString())
                 .sign(algorithm);
     }
+
 
     public DecodedJWT validateToken(String token) {
         try {

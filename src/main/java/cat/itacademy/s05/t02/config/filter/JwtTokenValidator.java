@@ -8,17 +8,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.AuthorityUtils;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collection;
+
 
 
 public class JwtTokenValidator extends OncePerRequestFilter {
@@ -30,29 +25,37 @@ public class JwtTokenValidator extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request,
-                                    @NonNull HttpServletResponse response,
-                                    @NonNull FilterChain filterChain) throws ServletException, IOException {
-
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain chain) throws IOException, ServletException {
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String jwtToken = authHeader.substring("Bearer ".length()).trim();
             try {
-                DecodedJWT decodedJWT = jwtUtils.validateToken(jwtToken);
+                DecodedJWT decoded = jwtUtils.validateToken(jwtToken);
+                String username = jwtUtils.extractUsername(decoded);
 
-                String username = jwtUtils.extractUsername(decodedJWT);
+                var claim = decoded.getClaim("authorities");
+                java.util.List<String> list = claim != null && !claim.isNull()
+                        ? claim.asList(String.class)  // ← esperamos ARRAY
+                        : java.util.List.of();
 
-                String stringAuthorities = decodedJWT.getClaim("authorities").asString();
-                if (stringAuthorities == null) stringAuthorities = "";
+                // (opcional) fallback CSV para tokens antiguos
+                if (list == null) {
+                    String csv = claim.asString();
+                    list = (csv == null || csv.isBlank())
+                            ? java.util.List.of()
+                            : java.util.Arrays.stream(csv.split(","))
+                            .map(String::trim).filter(s -> !s.isBlank()).toList();
+                    // log.warn("JWT authorities en CSV: considera regenerar el token como array.");
+                }
 
-                Collection<? extends GrantedAuthority> authorities =
-                        AuthorityUtils.commaSeparatedStringToAuthorityList(stringAuthorities);
+                var authorities = list.stream()
+                        .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                        .toList();
 
-                Authentication authentication =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
-
-                SecurityContext context = SecurityContextHolder.createEmptyContext();
+                var authentication = new UsernamePasswordAuthenticationToken(username, null, authorities);
+                var context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(authentication);
                 SecurityContextHolder.setContext(context);
 
@@ -63,8 +66,7 @@ public class JwtTokenValidator extends OncePerRequestFilter {
                 return;
             }
         }
-
-        filterChain.doFilter(request, response);
+        chain.doFilter(request, response);
     }
 }
 
