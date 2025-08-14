@@ -16,7 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Auth", description = "Registro y login (JWT)")
+@Tag(name = "Auth", description = "Register and login (JWT)")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -25,7 +25,7 @@ public class AuthController {
     private final UserDetailServiceImpl userDetailService;
 
     @Operation(
-            summary = "Registro de usuario (asigna rol USER por defecto)",
+            summary = "Register a new user with email and password (USER role by default)",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(
@@ -54,8 +54,8 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Login con email y password",
-            description = "Devuelve un JWT válido para usar como 'Authorization: Bearer <token>'",
+            summary = "Login by email and password",
+            description = "Retrund a valid JWT 'Authorization: Bearer <token>'",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(

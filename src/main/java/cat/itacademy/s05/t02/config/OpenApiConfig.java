@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @OpenAPIDefinition(
-        info = @Info(title = "Virtual Pet API", version = "1.0", description = "Backend de mascotas virtuales"),
+        info = @Info(title = "Virtual Pet API", version = "1.0", description = "Backend of virtual pets application"),
         security = { @SecurityRequirement(name = "bearerAuth") }
 )
 public class OpenApiConfig {
