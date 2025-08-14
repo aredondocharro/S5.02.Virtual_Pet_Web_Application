@@ -26,123 +26,113 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class UserDetailServiceImpl implements UserDetailsService {
 
-    @Autowired
-    private UserRepository userRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private JwtUtils jwtUtils;
+    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private RoleRepository roleRepository;
 
-    @Autowired
-    private JwtUtils jwtUtils;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private RoleRepository roleRepository;
-
+    // === 1) Cargar por EMAIL ===
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserEntity userEntity = userRepository.findUserEntityByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        UserEntity userEntity = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        List<SimpleGrantedAuthority> authorityList = new ArrayList<>();
-
-        userEntity.getRoles()
-                .forEach(role -> authorityList.add(new SimpleGrantedAuthority("ROLE_".concat(role.getRoleEnum().name()))));
-
-        userEntity.getRoles().stream()
-                .flatMap(role -> role.getPermissionList().stream())
-                .forEach(permission -> authorityList.add(new SimpleGrantedAuthority(permission.getName())));
-        return new User(userEntity.getUsername(),
+        List<SimpleGrantedAuthority> authorityList = buildAuthorities(userEntity);
+        return new User(
+                userEntity.getEmail(),                    // principal = email
                 userEntity.getPassword(),
                 userEntity.isEnabled(),
                 userEntity.isAccountNonExpired(),
                 userEntity.isCredentialsNonExpired(),
                 userEntity.isAccountNonLocked(),
-                authorityList);
+                authorityList
+        );
     }
 
-    public AuthResponse loginUser(AuthLoginRequest authLoginRequest) {
-        String username = authLoginRequest.username();
-        String password = authLoginRequest.password();
+    private List<SimpleGrantedAuthority> buildAuthorities(UserEntity userEntity) {
+        List<SimpleGrantedAuthority> list = new ArrayList<>();
 
-        Authentication authentication = this.authenticate(username, password);
+        // Roles -> ROLE_*
+        userEntity.getRoles()
+                .forEach(role -> list.add(new SimpleGrantedAuthority("ROLE_" + role.getRoleEnum().name())));
+
+        // Permissions (si tu RoleEntity tiene permissionList)
+        userEntity.getRoles().stream()
+                .flatMap(role -> role.getPermissionList().stream())
+                .forEach(permission -> list.add(new SimpleGrantedAuthority(permission.getName())));
+
+        return list;
+    }
+
+    // === 2) LOGIN por EMAIL ===
+    public AuthResponse loginUser(AuthLoginRequest req) {
+        String email = req.email();
+        String password = req.password();
+
+        Authentication authentication = this.authenticate(email, password);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String accesToken = jwtUtils.createToken(authentication);
+        String accessToken = jwtUtils.createToken(authentication);
 
-        AuthResponse authResponse = new AuthResponse(username, "User logged in successfully", accesToken, true);
-
-        return authResponse;
+        return new AuthResponse(email, "User logged in successfully", accessToken, true);
     }
 
-    public Authentication authenticate(String username, String password) {
-        UserDetails userDetails = loadUserByUsername(username);
-        if (userDetails == null) {
-            throw new BadCredentialsException("Invalid username or password");
+    public Authentication authenticate(String email, String rawPassword) {
+        UserDetails userDetails = loadUserByUsername(email);
+        if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
+            throw new BadCredentialsException("Invalid email or password");
         }
-        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
-            throw new BadCredentialsException("Invalid username or password");
-        }
-        return new UsernamePasswordAuthenticationToken(username, userDetails.getPassword(), userDetails.getAuthorities());
+        return new UsernamePasswordAuthenticationToken(
+                userDetails.getUsername(), userDetails.getPassword(), userDetails.getAuthorities());
     }
 
-    public AuthResponse createUser(AuthCreateUserRequest authCreateUserRequest) {
-        String username = authCreateUserRequest.username();
-        String password = authCreateUserRequest.password();
-        List<RoleEnum> requested = authCreateUserRequest.roleRequest().roleListName().stream()
-                .map(s -> {
-                    try {
-                        return RoleEnum.valueOf(s.toUpperCase());
-                    } catch (IllegalArgumentException ex) {
-                        throw new IllegalArgumentException("Invalid role: " + s);
-                    }
-                })
-                .toList();
+    // === 3) REGISTER por EMAIL + ROLE_USER auto ===
+    public AuthResponse createUser(AuthCreateUserRequest req) {
+        String email = req.email();
+        String password = req.password();
 
-        Set<RoleEntity> roleEntitySet = new HashSet<>(roleRepository.findByRoleEnumIn(requested));
-
-        if (roleEntitySet.isEmpty()) {
-            throw new IllegalArgumentException("The roles provided do not exist");
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already in use");
         }
 
-        UserEntity userEntity = UserEntity.builder()
-                .username(username)
+        RoleEntity roleUser = roleRepository.findByRoleEnum(RoleEnum.USER)
+                .orElseThrow(() -> new IllegalStateException("ROLE_USER not found"));
+
+        Set<RoleEntity> roles = new HashSet<>();
+        roles.add(roleUser);
+
+        UserEntity newUser = UserEntity.builder()
+                .email(email)
                 .password(passwordEncoder.encode(password))
                 .isEnabled(true)
                 .accountNonExpired(true)
                 .credentialsNonExpired(true)
                 .accountNonLocked(true)
-                .roles(roleEntitySet)
+                .roles(roles)
                 .build();
 
-        UserEntity userCreated = userRepository.save(userEntity);
-        List<SimpleGrantedAuthority> authorityList = new ArrayList<>();
+        UserEntity userCreated = userRepository.save(newUser);
 
-        userCreated.getRoles()
-                .forEach(role -> authorityList.add(new SimpleGrantedAuthority("ROLE_".concat(role.getRoleEnum().name()))));
-
-        userCreated.getRoles().stream()
-                .flatMap(role -> role.getPermissionList().stream())
-                .forEach(permission -> authorityList.add(new SimpleGrantedAuthority(permission.getName())));
+        List<SimpleGrantedAuthority> authorityList = buildAuthorities(userCreated);
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userCreated.getUsername(),
+                userCreated.getEmail(),
                 userCreated.getPassword(),
                 authorityList
         );
+
         String accessToken = jwtUtils.createToken(authentication);
 
-        AuthResponse authResponse = new AuthResponse(
-                userCreated.getUsername(),
+        return new AuthResponse(
+                userCreated.getEmail(),
                 "User created successfully",
                 accessToken,
                 true
         );
-
-        return authResponse;
     }
 }
+

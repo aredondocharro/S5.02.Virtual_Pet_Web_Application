@@ -21,6 +21,9 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Column(nullable = false, unique = true, length = 150)
+    private String email;
+
     @Column(unique = true)
     private String username;
     private String password;
@@ -37,7 +40,7 @@ public class UserEntity {
     @Column(name = "account_non_locked")
     private boolean accountNonLocked;
 
-    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable (name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))

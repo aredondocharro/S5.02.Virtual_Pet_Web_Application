@@ -11,55 +11,59 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtUtils {
 
     @Value("${security.jwt.secret}")
-    private String privateKey;
+    private String secret;
 
     @Value("${security.jwt.user.generator}")
-    private String userGenerator;
+    private String issuer;
+
+    @Value("${security.jwt.exp-minutes:30}")
+    private long expMinutes;
 
     public String createToken(Authentication authentication){
-        Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
+        Algorithm algorithm = Algorithm.HMAC256(secret);
 
-        String username = authentication.getName();
+        String subject = authentication.getName(); // ahora es el email
 
-        String authorities = authentication.getAuthorities()
+        // Mejor como array de strings que como CSV
+        List<String> authorities = authentication.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(",")); // p.ej. "ROLE_USER,READ"
+                .toList();
+
+        Instant now = Instant.now();
+        Instant exp = now.plus(expMinutes, ChronoUnit.MINUTES);
 
         return JWT.create()
-                .withIssuer(this.userGenerator)
-                .withSubject(username)
-                .withClaim("authorities", authorities)
-                .withIssuedAt(new Date())
-                .withExpiresAt(new Date(System.currentTimeMillis() + 1800000)) // 30 min
+                .withIssuer(issuer)
+                .withSubject(subject)
+                .withArrayClaim("authorities", authorities.toArray(new String[0]))
+                .withIssuedAt(Date.from(now))
+                .withExpiresAt(Date.from(exp))
+                .withNotBefore(Date.from(now))
                 .withJWTId(UUID.randomUUID().toString())
-                .withNotBefore(new Date(System.currentTimeMillis()))
                 .sign(algorithm);
     }
 
     public DecodedJWT validateToken(String token) {
         try {
-            Algorithm algorithm = Algorithm.HMAC256(this.privateKey);
-
+            Algorithm algorithm = Algorithm.HMAC256(secret);
             JWTVerifier verifier = JWT.require(algorithm)
-                    .withIssuer(this.userGenerator)
-                    .acceptLeeway(3) // ✅ margen para nbf/exp (segundos)
+                    .withIssuer(issuer)
+                    .acceptLeeway(3) // segundos de margen
                     .build();
-
-
             return verifier.verify(token);
-
         } catch (JWTVerificationException e) {
-
             throw new JWTVerificationException("Token is not valid: " + e.getMessage(), e);
         }
     }
@@ -76,3 +80,4 @@ public class JwtUtils {
         return decodedJWT.getClaims();
     }
 }
+
