@@ -28,6 +28,12 @@ public class UserEntity {
     private String username;
     private String password;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(name = "bio")
+    private String bio;
+
     @Column(name = "is_enabled")
     private  boolean isEnabled;
 
