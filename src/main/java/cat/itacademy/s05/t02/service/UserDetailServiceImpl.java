@@ -90,10 +90,15 @@ public class UserDetailServiceImpl implements UserDetailsService {
                 userDetails.getUsername(), userDetails.getPassword(), userDetails.getAuthorities());
     }
 
-    // === 3) REGISTER por EMAIL + ROLE_USER auto ===
+
     public AuthResponse createUser(AuthCreateUserRequest req) {
+        String username = req.username();
         String email = req.email();
         String password = req.password();
+
+    if(userRepository.existsByUsername(username)){
+        throw new  IllegalArgumentException("Username already in use");
+        }
 
         if (userRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Email already in use");
@@ -106,6 +111,7 @@ public class UserDetailServiceImpl implements UserDetailsService {
         roles.add(roleUser);
 
         UserEntity newUser = UserEntity.builder()
+                .username(username)
                 .email(email)
                 .password(passwordEncoder.encode(password))
                 .isEnabled(true)

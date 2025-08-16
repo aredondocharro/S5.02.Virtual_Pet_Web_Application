@@ -33,7 +33,7 @@ public class AuthController {
                             examples = @ExampleObject(name = "register",
                                     value = """
                             {
-                              "name": "Alex",
+                              "username": "Alex",
                               "email": "alex@example.com",
                               "password": "1234"
                             }
