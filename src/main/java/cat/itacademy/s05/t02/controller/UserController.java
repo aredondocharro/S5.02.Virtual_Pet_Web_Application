@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/users")
 @SecurityRequirement(name = "bearerAuth")
+@Slf4j
 public class UserController {
 
     private final UserProfileService profile;
@@ -26,34 +28,32 @@ public class UserController {
         this.profile = profile;
     }
 
-    @Operation(summary = "My profile (me)",
-            description = "Return user profile authenticated")
+    @Operation(summary = "My profile (me)", description = "Return user profile authenticated")
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> me(Authentication auth) {
         String email = auth.getName();
-        return ResponseEntity.ok(profile.getMe(email));
+        log.debug("Profile requested by user='{}'", email);
+
+        UserProfileResponse res = profile.getMe(email);
+        log.info("Profile successfully retrieved for '{}'", email);
+
+        return ResponseEntity.ok(res);
     }
 
-    @Operation(
-            summary = "Actualizate my profile (me)",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = UserProfileUpdateRequest.class),
-                            examples = @ExampleObject(name = "updateProfile",
-                                    value = """
-                            {
-                              "username": "AlexGamer",
-                              "bio": "Cat lover. Pixel artist.",
-                              "avatarUrl": "https://i.pravatar.cc/200?img=12"
-                            }
-                            """)))
-    )
+    @Operation(summary = "Update my profile (me)")
     @PutMapping("/me")
     public ResponseEntity<UserProfileResponse> updateMe(
             Authentication auth,
             @RequestBody @Valid UserProfileUpdateRequest req) {
+
         String email = auth.getName();
-        return ResponseEntity.ok(profile.updateMe(email, req));
+        log.info("Profile update requested by user='{}' with new username='{}'",
+                email, req.getUsername());
+
+        UserProfileResponse updated = profile.updateMe(email, req);
+        log.debug("Profile updated successfully for '{}'", email);
+
+        return ResponseEntity.ok(updated);
     }
 }
+

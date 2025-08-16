@@ -7,6 +7,7 @@ import cat.itacademy.s05.t02.controller.mapper.PetMapper;
 import cat.itacademy.s05.t02.persistence.entity.PetEntity;
 import cat.itacademy.s05.t02.service.PetService;
 import io.swagger.v3.oas.annotations.Operation;
+import lombok.extern.slf4j.Slf4j;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -25,6 +26,7 @@ import java.util.List;
 
 @Tag(name = "Pets", description = "Virtual Pet CRUD. USER sees/manages only their own pets; ADMIN sees/manages all pets.")
 @RestController
+@Slf4j
 @RequestMapping("/api/pets")
 @SecurityRequirement(name = "bearerAuth")
 public class PetController {
@@ -35,74 +37,33 @@ public class PetController {
         this.service = service;
     }
 
-    @Operation(
-            summary = "Pet List",
-            description = "USER: returns only yours. ADMIN: returns all.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Listado",
-                            content = @Content(mediaType = "application/json",
-                                    array = @ArraySchema(schema = @Schema(implementation = PetResponse.class)))),
-                    @ApiResponse(responseCode = "401", description = "No authenticated"),
-                    @ApiResponse(responseCode = "403", description = "No permission to see all pets")
-            }
-    )
+    @Operation(summary = "Pet List", description = "USER: returns only yours. ADMIN: returns all.")
     @GetMapping
     public ResponseEntity<List<PetResponse>> list(Authentication auth) {
         String email = auth.getName();
         boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        log.debug("User '{}' (admin={}) requested pet list", email, isAdmin);
+
         List<PetResponse> out = service.listMine(email, isAdmin)
                 .stream().map(PetMapper::toResponse).toList();
+
+        log.info("Returning {} pets for user='{}' (admin={})", out.size(), email, isAdmin);
         return ResponseEntity.ok(out);
     }
 
-    @Operation(
-            summary = "Pet creation",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = PetCreateRequest.class),
-                            examples = @ExampleObject(name = "create",
-                                    value = """
-                            {
-                              "name": "Neko",
-                              "color": "blue"
-                            }
-                            """))),
-            responses = {
-                    @ApiResponse(responseCode = "201", description = "Created",
-                            content = @Content(schema = @Schema(implementation = PetResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "Invalid data"),
-                    @ApiResponse(responseCode = "401", description = "No authenticated"),
-            }
-    )
+    @Operation(summary = "Pet creation")
     @PostMapping
     public ResponseEntity<PetResponse> create(@RequestBody @Valid PetCreateRequest req, Authentication auth) {
         String email = auth.getName();
+        log.info("User '{}' requested to create pet: name='{}', color='{}'", email, req.getName(), req.getColor());
+
         PetEntity created = service.create(email, req.getName(), req.getColor());
+        log.debug("Pet created successfully with id={} for owner='{}'", created.getId(), email);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(PetMapper.toResponse(created));
     }
 
-    @Operation(
-            summary = "Update a pet's status (hunger/happiness)",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = PetUpdateRequest.class),
-                            examples = @ExampleObject(name = "update",
-                                    value = """
-                            {
-                              "hunger": 25,
-                              "happiness": 90
-                            }
-                            """))),
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Actualizado",
-                            content = @Content(schema = @Schema(implementation = PetResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "No authenticated"),
-                    @ApiResponse(responseCode = "403", description = "You are not the owner and you are not an ADMIN"),
-                    @ApiResponse(responseCode = "404", description = "There is no pet")
-            }
-    )
+    @Operation(summary = "Update a pet's status (hunger/happiness)")
     @PutMapping("/{id}")
     public ResponseEntity<PetResponse> update(
             @PathVariable Long id,
@@ -110,23 +71,25 @@ public class PetController {
             Authentication auth) {
 
         boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        log.info("User '{}' (admin={}) updating pet id={} hunger={} happiness={}",
+                auth.getName(), isAdmin, id, req.getHunger(), req.getHappiness());
+
         PetEntity updated = service.updateMyPet(auth.getName(), isAdmin, id, req.getHunger(), req.getHappiness());
+        log.debug("Pet id={} updated successfully by user='{}'", id, auth.getName());
+
         return ResponseEntity.ok(PetMapper.toResponse(updated));
     }
 
-    @Operation(
-            summary = "Delete pet",
-            responses = {
-                    @ApiResponse(responseCode = "204", description = "Deleted"),
-                    @ApiResponse(responseCode = "401", description = "No authenticated"),
-                    @ApiResponse(responseCode = "403", description = "You are not the owner and you are not an ADMIN"),
-                    @ApiResponse(responseCode = "404", description = "No pet found")
-            }
-    )
+    @Operation(summary = "Delete pet")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, Authentication auth) {
         boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        log.warn("User '{}' (admin={}) requested deletion of pet id={}", auth.getName(), isAdmin, id);
+
         service.deleteMyPet(auth.getName(), isAdmin, id);
+        log.info("Pet id={} deleted successfully by user='{}'", id, auth.getName());
+
         return ResponseEntity.noContent().build();
     }
 }
+

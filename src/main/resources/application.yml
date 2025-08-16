@@ -5,7 +5,6 @@ spring:
   application:
     name: S05T02
 
-  # 👇 Importa .env SIEMPRE (global)
   config:
     import: optional:file:.env[.properties]
 
@@ -57,5 +56,11 @@ spring:
       ddl-auto: update
 logging:
   level:
-    root: INFO
+    cat.itacademy.s05.t02: INFO
+    org.springframework.security: INFO
+  file:
+    name: logs/app.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
 

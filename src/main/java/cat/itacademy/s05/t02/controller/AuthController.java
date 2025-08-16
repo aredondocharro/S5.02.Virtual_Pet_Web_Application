@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Auth", description = "Register and login (JWT)")
+@Slf4j
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -25,61 +27,38 @@ public class AuthController {
     private final UserDetailServiceImpl userDetailService;
 
     @Operation(
-            summary = "Register a new user with email and password (USER role by default)",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(name = "register",
-                                    value = """
-                            {
-                              "username": "Alex",
-                              "email": "alex@example.com",
-                              "password": "1234"
-                            }
-                            """
-                            )
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "201", description = "Usuario creado",
-                            content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "Datos inválidos")
-            }
+            summary = "Register a new user with email and password (USER role by default)"
     )
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody @Valid AuthCreateUserRequest body) {
-        AuthResponse res = userDetailService.createUser(body);
-        return ResponseEntity.status(HttpStatus.CREATED).body(res);
+        log.info("Register request received for email='{}'", body.email());
+        try {
+            AuthResponse res = userDetailService.createUser(body);
+            log.info("User registered successfully: email='{}'", body.email());
+            return ResponseEntity.status(HttpStatus.CREATED).body(res);
+        } catch (Exception e) {
+            log.warn("Register failed for email='{}': {}", body.email(), e.getMessage());
+            throw e;
+        }
     }
 
     @Operation(
             summary = "Login by email and password",
-            description = "Retrund a valid JWT 'Authorization: Bearer <token>'",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    content = @Content(
-                            mediaType = "application/json",
-                            examples = @ExampleObject(name = "login",
-                                    value = """
-                            {
-                              "email": "alex@example.com",
-                              "password": "1234"
-                            }
-                            """
-                            )
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "OK",
-                            content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Credenciales inválidas")
-            }
+            description = "Returns a valid JWT 'Authorization: Bearer <token>'"
     )
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid AuthLoginRequest body) {
-        AuthResponse res = userDetailService.loginUser(body);
-        return ResponseEntity.ok(res);
+        log.info("Login attempt for email='{}'", body.email());
+        try {
+            AuthResponse res = userDetailService.loginUser(body);
+            log.info("Login successful for email='{}'", body.email());
+            log.debug("JWT issued for '{}'", body.email());
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            log.warn("Login failed for email='{}': {}", body.email(), e.getMessage());
+            throw e;
+        }
     }
 }
+
 

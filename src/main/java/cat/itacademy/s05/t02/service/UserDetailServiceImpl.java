@@ -9,6 +9,7 @@ import cat.itacademy.s05.t02.persistence.entity.UserEntity;
 import cat.itacademy.s05.t02.persistence.repository.RoleRepository;
 import cat.itacademy.s05.t02.persistence.repository.UserRepository;
 import cat.itacademy.s05.t02.util.JwtUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@Slf4j
 public class UserDetailServiceImpl implements UserDetailsService {
 
     @Autowired private UserRepository userRepository;
@@ -38,10 +40,16 @@ public class UserDetailServiceImpl implements UserDetailsService {
     // === 1) Cargar por EMAIL ===
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        log.debug("Loading user by email='{}'", email);
         UserEntity userEntity = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> {
+                    log.warn("User not found with email='{}'", email);
+                    return new UsernameNotFoundException("User not found with email: " + email);
+                });
 
         List<SimpleGrantedAuthority> authorityList = buildAuthorities(userEntity);
+        log.info("User '{}' loaded with {} authorities", email, authorityList.size());
+
         return new User(
                 userEntity.getEmail(),                    // principal = email
                 userEntity.getPassword(),
@@ -60,7 +68,7 @@ public class UserDetailServiceImpl implements UserDetailsService {
         userEntity.getRoles()
                 .forEach(role -> list.add(new SimpleGrantedAuthority("ROLE_" + role.getRoleEnum().name())));
 
-        // Permissions (si tu RoleEntity tiene permissionList)
+        // Permissions
         userEntity.getRoles().stream()
                 .flatMap(role -> role.getPermissionList().stream())
                 .forEach(permission -> list.add(new SimpleGrantedAuthority(permission.getName())));
@@ -73,10 +81,12 @@ public class UserDetailServiceImpl implements UserDetailsService {
         String email = req.email();
         String password = req.password();
 
+        log.info("Login attempt for email='{}'", email);
         Authentication authentication = this.authenticate(email, password);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String accessToken = jwtUtils.createToken(authentication);
+        log.info("Login successful for email='{}'", email);
 
         return new AuthResponse(email, "User logged in successfully", accessToken, true);
     }
@@ -84,28 +94,37 @@ public class UserDetailServiceImpl implements UserDetailsService {
     public Authentication authenticate(String email, String rawPassword) {
         UserDetails userDetails = loadUserByUsername(email);
         if (!passwordEncoder.matches(rawPassword, userDetails.getPassword())) {
+            log.warn("Authentication failed for email='{}': bad credentials", email);
             throw new BadCredentialsException("Invalid email or password");
         }
+        log.debug("Authentication OK for '{}'", email);
         return new UsernamePasswordAuthenticationToken(
                 userDetails.getUsername(), userDetails.getPassword(), userDetails.getAuthorities());
     }
 
-
+    // === 3) REGISTER ===
     public AuthResponse createUser(AuthCreateUserRequest req) {
         String username = req.username();
         String email = req.email();
         String password = req.password();
 
-    if(userRepository.existsByUsername(username)){
-        throw new  IllegalArgumentException("Username already in use");
+        log.info("Register attempt: username='{}', email='{}'", username, email);
+
+        if (userRepository.existsByUsername(username)) {
+            log.warn("Register failed: username '{}' already in use", username);
+            throw new IllegalArgumentException("Username already in use");
         }
 
         if (userRepository.existsByEmail(email)) {
+            log.warn("Register failed: email '{}' already in use", email);
             throw new IllegalArgumentException("Email already in use");
         }
 
         RoleEntity roleUser = roleRepository.findByRoleEnum(RoleEnum.USER)
-                .orElseThrow(() -> new IllegalStateException("ROLE_USER not found"));
+                .orElseThrow(() -> {
+                    log.error("ROLE_USER not found in DB");
+                    return new IllegalStateException("ROLE_USER not found");
+                });
 
         Set<RoleEntity> roles = new HashSet<>();
         roles.add(roleUser);
@@ -122,6 +141,7 @@ public class UserDetailServiceImpl implements UserDetailsService {
                 .build();
 
         UserEntity userCreated = userRepository.save(newUser);
+        log.info("User '{}' registered successfully with id={}", email, userCreated.getId());
 
         List<SimpleGrantedAuthority> authorityList = buildAuthorities(userCreated);
 
@@ -132,6 +152,7 @@ public class UserDetailServiceImpl implements UserDetailsService {
         );
 
         String accessToken = jwtUtils.createToken(authentication);
+        log.debug("JWT issued for newly created user '{}'", email);
 
         return new AuthResponse(
                 userCreated.getEmail(),
@@ -141,4 +162,5 @@ public class UserDetailServiceImpl implements UserDetailsService {
         );
     }
 }
+
 

@@ -4,6 +4,7 @@ import cat.itacademy.s05.t02.config.filter.JwtTokenValidator;
 import cat.itacademy.s05.t02.service.UserDetailServiceImpl;
 import cat.itacademy.s05.t02.util.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -27,6 +28,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
     private final JwtUtils jwtUtils;
@@ -39,7 +41,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+        log.info("Configuring HTTP security: stateless + JWT filter");
+        SecurityFilterChain chain = http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -58,23 +61,33 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/app/delete").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/app/patch").hasRole("ADMIN")
 
-                        // lo demás
                         .anyRequest().authenticated()
                 )
 
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED)) // 401
-                        .accessDeniedHandler((req, res, e) -> res.sendError(HttpServletResponse.SC_FORBIDDEN))          // 403
+                        .authenticationEntryPoint((req, res, e) -> {
+                            log.warn("Unauthorized access to '{} {}' -> 401", req.getMethod(), req.getRequestURI());
+                            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                        })
+                        .accessDeniedHandler((req, res, e) -> {
+                            log.warn("Access denied to '{} {}' -> 403", req.getMethod(), req.getRequestURI());
+                            res.sendError(HttpServletResponse.SC_FORBIDDEN);
+                        })
                 )
 
                 // Coloca el validador JWT antes del UsernamePasswordAuthenticationFilter
                 .addFilterBefore(new JwtTokenValidator(jwtUtils), UsernamePasswordAuthenticationFilter.class)
                 .build();
+
+        log.info("Security filter chain built. JWT validator registered before UsernamePasswordAuthenticationFilter");
+        return chain;
     }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration cfg) throws Exception {
-        return cfg.getAuthenticationManager();
+        AuthenticationManager manager = cfg.getAuthenticationManager();
+        log.debug("AuthenticationManager bean created");
+        return manager;
     }
 
     @Bean
@@ -82,13 +95,16 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setPasswordEncoder(passwordEncoder());
         provider.setUserDetailsService(userDetailsService);
+        log.debug("DaoAuthenticationProvider configured with custom UserDetailsService and PasswordEncoder");
         return provider;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
+        log.debug("PasswordEncoder bean (BCrypt) created");
         return new BCryptPasswordEncoder();
     }
 }
+
 
 

@@ -12,7 +12,7 @@ public class PetMapper {
         return PetEntity.builder()
                 .name(req.getName())
                 .color(req.getColor())
-                .hunger(50)      // valores iniciales por defecto
+                .hunger(50)
                 .happiness(50)
                 .build();
     }
