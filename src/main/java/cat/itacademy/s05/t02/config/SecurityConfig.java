@@ -1,8 +1,11 @@
 package cat.itacademy.s05.t02.config;
 
 import cat.itacademy.s05.t02.config.filter.JwtTokenValidator;
+import cat.itacademy.s05.t02.config.handler.JsonAccessDeniedHandler;
+import cat.itacademy.s05.t02.config.handler.JsonAuthenticationEntryPoint;
 import cat.itacademy.s05.t02.service.UserDetailServiceImpl;
 import cat.itacademy.s05.t02.util.JwtUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +25,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import jakarta.servlet.http.HttpServletResponse;
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -42,6 +43,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         log.info("Configuring HTTP security: stateless + JWT filter");
+
         SecurityFilterChain chain = http
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -49,33 +51,29 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
-                        // público
+                        // public
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        // /app/*
-                        .requestMatchers(HttpMethod.GET, "/app/get").hasAnyRole("USER","ADMIN")
+                        // demo endpoints under /app/*
+                        .requestMatchers(HttpMethod.GET, "/app/get").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/app/post").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/app/put").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/app/delete").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/app/patch").hasRole("ADMIN")
 
+                        // everything else
                         .anyRequest().authenticated()
                 )
 
+                // unified JSON for 401/403
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> {
-                            log.warn("Unauthorized access to '{} {}' -> 401", req.getMethod(), req.getRequestURI());
-                            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                        })
-                        .accessDeniedHandler((req, res, e) -> {
-                            log.warn("Access denied to '{} {}' -> 403", req.getMethod(), req.getRequestURI());
-                            res.sendError(HttpServletResponse.SC_FORBIDDEN);
-                        })
+                        .authenticationEntryPoint(new JsonAuthenticationEntryPoint(new ObjectMapper()))
+                        .accessDeniedHandler(new JsonAccessDeniedHandler(new ObjectMapper()))
                 )
 
-                // Coloca el validador JWT antes del UsernamePasswordAuthenticationFilter
+                // JWT validator before UsernamePasswordAuthenticationFilter
                 .addFilterBefore(new JwtTokenValidator(jwtUtils), UsernamePasswordAuthenticationFilter.class)
                 .build();
 
@@ -105,6 +103,7 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+
 
 
 
