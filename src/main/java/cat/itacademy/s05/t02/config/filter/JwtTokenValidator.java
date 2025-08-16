@@ -38,24 +38,26 @@ public class JwtTokenValidator extends OncePerRequestFilter {
         }
 
         String jwtToken = authHeader.substring("Bearer ".length()).trim();
-        try {
 
+        try {
             DecodedJWT decoded = jwtUtils.validateToken(jwtToken);
             String username = jwtUtils.extractUsername(decoded);
             String jti = decoded.getId();
 
             var claim = decoded.getClaim("authorities");
             java.util.List<String> list = claim != null && !claim.isNull()
-                    ? claim.asList(String.class)  // ← esperamos ARRAY
+                    ? claim.asList(String.class) // expected ARRAY
                     : java.util.List.of();
 
-
+            // Fallback for legacy CSV authorities
             if (list == null) {
                 String csv = claim.asString();
                 list = (csv == null || csv.isBlank())
                         ? java.util.List.of()
                         : java.util.Arrays.stream(csv.split(","))
-                        .map(String::trim).filter(s -> !s.isBlank()).toList();
+                        .map(String::trim)
+                        .filter(s -> !s.isBlank())
+                        .toList();
                 log.warn("JWT authorities provided as CSV for sub='{}' (consider issuing array-style claim).", username);
             }
 
@@ -71,23 +73,13 @@ public class JwtTokenValidator extends OncePerRequestFilter {
             log.info("JWT valid: sub='{}' jti='{}' authorities={} path='{}'",
                     username, jti, authorities.size(), path);
 
+            chain.doFilter(request, response);
         } catch (JWTVerificationException ex) {
             log.warn("Invalid JWT on path='{}': {}", path, ex.getMessage());
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Invalid JWT: " + ex.getMessage() + "\"}");
-            return;
-        } catch (Exception ex) {
-
-            log.error("Error processing JWT on path='{}': {}", path, ex.getMessage(), ex);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Invalid JWT\"}");
-            return;
+            throw ex;
         }
-
-        chain.doFilter(request, response);
     }
 }
+
 
 
