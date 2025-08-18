@@ -3,14 +3,14 @@ package cat.itacademy.s05.t02.controller.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
-@Schema(description = "Payload para crear una mascota")
+@Schema(description = "Payload to create a pet")
 public class PetCreateRequest {
 
-    @Schema(description = "Nombre visible de la mascota", example = "Neko", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Visible name", example = "Neko", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
     private String name;
 
-    @Schema(description = "Color principal", example = "blue", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "Main colour", example = "blue", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank
     private String color;
 
