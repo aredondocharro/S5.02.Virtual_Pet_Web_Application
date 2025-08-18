@@ -1,17 +1,20 @@
 package cat.itacademy.s05.t02.exception;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 
@@ -19,7 +22,35 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // 400 - Malformed JSON, invalid enums, etc.
+
+    @ExceptionHandler(NotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ErrorResponse handleNotFound(NotFoundException ex, HttpServletRequest req) {
+        log.warn("404 Not Found on {} {}: {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        return ErrorResponse.of(404, "NOT_FOUND", ex.getMessage(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse handleConflict(ConflictException ex, HttpServletRequest req) {
+        log.warn("409 Conflict on {} {}: {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        return ErrorResponse.of(409, "CONFLICT", ex.getMessage(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public ErrorResponse handleForbidden(ForbiddenException ex, HttpServletRequest req) {
+        log.warn("403 Forbidden on {} {}: {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        return ErrorResponse.of(403, "FORBIDDEN", ex.getMessage(), req.getRequestURI());
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleBadRequest(BadRequestException ex, HttpServletRequest req) {
+        log.warn("400 Bad Request on {} {}: {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        return ErrorResponse.of(400, "BAD_REQUEST", ex.getMessage(), req.getRequestURI());
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest req) {
@@ -27,7 +58,6 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(400, "BAD_REQUEST", "Malformed JSON or invalid request body", req.getRequestURI());
     }
 
-    // 400 - @Valid validation on request body
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ValidationErrorResponse handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
@@ -38,7 +68,6 @@ public class GlobalExceptionHandler {
         return ValidationErrorResponse.of(400, "VALIDATION_ERROR", "Invalid input data", req.getRequestURI(), fields);
     }
 
-    // 400 - @Validated validation on query/path parameters
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ValidationErrorResponse handleBind(BindException ex, HttpServletRequest req) {
@@ -49,7 +78,32 @@ public class GlobalExceptionHandler {
         return ValidationErrorResponse.of(400, "VALIDATION_ERROR", "Invalid input data", req.getRequestURI(), fields);
     }
 
-    // 401 - Authentication (credentials)
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ValidationErrorResponse handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest req) {
+        List<FieldError> fields = ex.getConstraintViolations().stream()
+                .map(this::toFieldError)
+                .toList();
+        log.warn("400 Constraint violations on {} {} -> {} field errors", req.getMethod(), req.getRequestURI(), fields.size());
+        return ValidationErrorResponse.of(400, "VALIDATION_ERROR", "Invalid input data", req.getRequestURI(), fields);
+    }
+
+    private FieldError toFieldError(ConstraintViolation<?> v) {
+        String field = v.getPropertyPath() != null ? v.getPropertyPath().toString() : null;
+        return new FieldError(field, v.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+        String param = ex.getName();
+        String requiredType = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "required type";
+        String msg = "Parameter '" + param + "' must be a valid " + requiredType;
+        log.warn("400 Type mismatch on {} {}: {}", req.getMethod(), req.getRequestURI(), msg);
+        return ErrorResponse.of(400, "BAD_REQUEST", msg, req.getRequestURI());
+    }
+
+
     @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ErrorResponse handleUnauthorized(RuntimeException ex, HttpServletRequest req) {
@@ -57,7 +111,7 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(401, "UNAUTHORIZED", "Invalid credentials", req.getRequestURI());
     }
 
-    // 401 - Invalid JWT
+
     @ExceptionHandler(JWTVerificationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public ErrorResponse handleJwt(JWTVerificationException ex, HttpServletRequest req) {
@@ -65,7 +119,6 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(401, "UNAUTHORIZED", "Invalid JWT token", req.getRequestURI());
     }
 
-    // 403 - Forbidden (roles/ownership)
     @ExceptionHandler({AccessDeniedException.class, SecurityException.class})
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleForbidden(Exception ex, HttpServletRequest req) {
@@ -73,7 +126,6 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(403, "FORBIDDEN", "You do not have permission to perform this action", req.getRequestURI());
     }
 
-    // 409 - Integrity/duplicate keys
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public ErrorResponse handleConflict(DataIntegrityViolationException ex, HttpServletRequest req) {
@@ -82,7 +134,6 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(409, "CONFLICT", "Data integrity violation", req.getRequestURI());
     }
 
-    // 400 - Explicit business rule violations
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest req) {
@@ -90,7 +141,6 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(400, "BAD_REQUEST", ex.getMessage(), req.getRequestURI());
     }
 
-    // 500 - Generic fallback
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleGeneric(Exception ex, HttpServletRequest req) {
@@ -98,3 +148,4 @@ public class GlobalExceptionHandler {
         return ErrorResponse.of(500, "INTERNAL_SERVER_ERROR", "An unexpected server error occurred", req.getRequestURI());
     }
 }
+

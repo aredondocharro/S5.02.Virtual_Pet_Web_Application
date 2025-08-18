@@ -3,6 +3,8 @@ package cat.itacademy.s05.t02.service;
 import cat.itacademy.s05.t02.controller.dto.AuthCreateUserRequest;
 import cat.itacademy.s05.t02.controller.dto.AuthLoginRequest;
 import cat.itacademy.s05.t02.controller.dto.AuthResponse;
+import cat.itacademy.s05.t02.exception.BadRequestException;
+import cat.itacademy.s05.t02.exception.ConflictException;
 import cat.itacademy.s05.t02.persistence.entity.RoleEntity;
 import cat.itacademy.s05.t02.persistence.entity.RoleEnum;
 import cat.itacademy.s05.t02.persistence.entity.UserEntity;
@@ -22,6 +24,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -37,21 +40,23 @@ public class UserDetailServiceImpl implements UserDetailsService {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private RoleRepository roleRepository;
 
-    // === 1) Cargar por EMAIL ===
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        log.debug("Loading user by email='{}'", email);
-        UserEntity userEntity = userRepository.findByEmail(email)
+        String normalizedEmail = email == null ? null : email.trim();
+        log.debug("Loading user by email='{}'", normalizedEmail);
+
+        UserEntity userEntity = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> {
-                    log.warn("User not found with email='{}'", email);
-                    return new UsernameNotFoundException("User not found with email: " + email);
+                    log.warn("User not found with email='{}'", normalizedEmail);
+                    return new UsernameNotFoundException("User not found with email: " + normalizedEmail);
                 });
 
         List<SimpleGrantedAuthority> authorityList = buildAuthorities(userEntity);
-        log.info("User '{}' loaded with {} authorities", email, authorityList.size());
+        log.info("User '{}' loaded with {} authorities", normalizedEmail, authorityList.size());
 
         return new User(
-                userEntity.getEmail(),                    // principal = email
+                userEntity.getEmail(),
                 userEntity.getPassword(),
                 userEntity.isEnabled(),
                 userEntity.isAccountNonExpired(),
@@ -64,11 +69,10 @@ public class UserDetailServiceImpl implements UserDetailsService {
     private List<SimpleGrantedAuthority> buildAuthorities(UserEntity userEntity) {
         List<SimpleGrantedAuthority> list = new ArrayList<>();
 
-        // Roles -> ROLE_*
         userEntity.getRoles()
                 .forEach(role -> list.add(new SimpleGrantedAuthority("ROLE_" + role.getRoleEnum().name())));
 
-        // Permissions
+
         userEntity.getRoles().stream()
                 .flatMap(role -> role.getPermissionList().stream())
                 .forEach(permission -> list.add(new SimpleGrantedAuthority(permission.getName())));
@@ -76,10 +80,14 @@ public class UserDetailServiceImpl implements UserDetailsService {
         return list;
     }
 
-    // === 2) LOGIN por EMAIL ===
+    // === 2) LOGIN by EMAIL ===
     public AuthResponse loginUser(AuthLoginRequest req) {
-        String email = req.email();
+        String email = req.email() == null ? null : req.email().trim();
         String password = req.password();
+
+        if (!StringUtils.hasText(email) || !StringUtils.hasText(password)) {
+            throw new BadRequestException("Email and password must not be blank");
+        }
 
         log.info("Login attempt for email='{}'", email);
         Authentication authentication = this.authenticate(email, password);
@@ -104,20 +112,34 @@ public class UserDetailServiceImpl implements UserDetailsService {
 
     // === 3) REGISTER ===
     public AuthResponse createUser(AuthCreateUserRequest req) {
-        String username = req.username();
-        String email = req.email();
+        String username = req.username() == null ? null : req.username().trim();
+        String email = req.email() == null ? null : req.email().trim();
         String password = req.password();
 
         log.info("Register attempt: username='{}', email='{}'", username, email);
 
-        if (userRepository.existsByUsername(username)) {
-            log.warn("Register failed: username '{}' already in use", username);
-            throw new IllegalArgumentException("Username already in use");
+        // Basic business validation
+        if (!StringUtils.hasText(username)) {
+            throw new BadRequestException("Username must not be blank");
+        }
+        if (!StringUtils.hasText(email)) {
+            throw new BadRequestException("Email must not be blank");
+        }
+        if (!StringUtils.hasText(password)) {
+            throw new BadRequestException("Password must not be blank");
+        }
+        if (password.length() < 8) {
+            throw new BadRequestException("Password must be at least 8 characters");
         }
 
+        // Duplicates
+        if (userRepository.existsByUsername(username)) {
+            log.warn("Register failed: username '{}' already in use", username);
+            throw new ConflictException("Username already in use");
+        }
         if (userRepository.existsByEmail(email)) {
             log.warn("Register failed: email '{}' already in use", email);
-            throw new IllegalArgumentException("Email already in use");
+            throw new ConflictException("Email already in use");
         }
 
         RoleEntity roleUser = roleRepository.findByRoleEnum(RoleEnum.USER)
@@ -162,5 +184,6 @@ public class UserDetailServiceImpl implements UserDetailsService {
         );
     }
 }
+
 
 

@@ -1,5 +1,8 @@
 package cat.itacademy.s05.t02.service;
 
+import cat.itacademy.s05.t02.exception.BadRequestException;
+import cat.itacademy.s05.t02.exception.ForbiddenException;
+import cat.itacademy.s05.t02.exception.NotFoundException;
 import cat.itacademy.s05.t02.persistence.entity.PetEntity;
 import cat.itacademy.s05.t02.persistence.entity.UserEntity;
 import cat.itacademy.s05.t02.persistence.repository.PetRepository;
@@ -7,6 +10,7 @@ import cat.itacademy.s05.t02.persistence.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -19,7 +23,8 @@ public class PetService {
     private final UserRepository users;
 
     public PetService(PetRepository pets, UserRepository users) {
-        this.pets = pets; this.users = users;
+        this.pets = pets;
+        this.users = users;
     }
 
     public List<PetEntity> listMine(String email, boolean isAdmin) {
@@ -31,22 +36,51 @@ public class PetService {
 
     public PetEntity create(String email, String name, String color) {
         log.debug("Creating pet for owner='{}' name='{}' color='{}'", email, name, color);
-        UserEntity owner = users.findByEmail(email).orElseThrow();
+
+        UserEntity owner = users.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found: " + email));
+
+        if (!StringUtils.hasText(name)) {
+            throw new BadRequestException("Pet name must not be blank");
+        }
+        if (!StringUtils.hasText(color)) {
+            throw new BadRequestException("Pet color must not be blank");
+        }
+
         PetEntity p = PetEntity.builder()
-                .name(name).color(color).hunger(50).happiness(50).owner(owner).build();
+                .name(name.trim())
+                .color(color.trim())
+                .hunger(50)
+                .happiness(50)
+                .owner(owner)
+                .build();
+
         PetEntity saved = pets.save(p);
-        log.info("Pet created id={} name='{}' owner='{}'", saved.getId(), name, email);
+        log.info("Pet created id={} name='{}' owner='{}'", saved.getId(), saved.getName(), email);
         return saved;
     }
 
     public PetEntity updateMyPet(String email, boolean isAdmin, Long id, int hunger, int happiness) {
         log.debug("Updating pet id={} by '{}' (admin={}) hunger={} happiness={}",
                 id, email, isAdmin, hunger, happiness);
-        PetEntity p = pets.findById(id).orElseThrow();
+
+        // Validación de rango (ajusta si tu dominio usa otros rangos)
+        if (hunger < 0 || hunger > 100) {
+            throw new BadRequestException("Hunger must be between 0 and 100");
+        }
+        if (happiness < 0 || happiness > 100) {
+            throw new BadRequestException("Happiness must be between 0 and 100");
+        }
+
+        PetEntity p = pets.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pet with id=" + id + " not found"));
+
+        // Ownership/role check
         if (!isAdmin && !p.getOwner().getEmail().equals(email)) {
             log.warn("Update forbidden: user='{}' is not owner of pet id={}", email, id);
-            throw new SecurityException("Forbidden");
+            throw new ForbiddenException("You do not own this pet");
         }
+
         p.setHunger(hunger);
         p.setHappiness(happiness);
         PetEntity updated = pets.save(p);
@@ -56,12 +90,18 @@ public class PetService {
 
     public void deleteMyPet(String email, boolean isAdmin, Long id) {
         log.warn("Delete requested for pet id={} by '{}' (admin={})", id, email, isAdmin);
-        if (!isAdmin && !pets.existsByIdAndOwnerEmail(id, email)) {
+
+        PetEntity p = pets.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pet with id=" + id + " not found"));
+
+        if (!isAdmin && !p.getOwner().getEmail().equals(email)) {
             log.warn("Delete forbidden: user='{}' tried to delete non-owned pet id={}", email, id);
-            throw new SecurityException("Forbidden");
+            throw new ForbiddenException("You do not own this pet");
         }
-        pets.deleteById(id);
+
+        pets.delete(p);
         log.info("Pet id={} deleted by '{}'", id, email);
     }
 }
+
 
