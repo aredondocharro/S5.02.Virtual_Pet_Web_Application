@@ -21,7 +21,6 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -44,19 +43,19 @@ class UserDetailServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // ROLE_USER con 2 permisos: READ, CREATE
+        // ROLE_USER with 2 permissions: READ, CREATE
         PermissionEntity pRead = PermissionEntity.builder().name("READ").build();
         PermissionEntity pCreate = PermissionEntity.builder().name("CREATE").build();
         roleUser = RoleEntity.builder()
                 .roleEnum(RoleEnum.USER)
-                .permissionList(List.of(pRead, pCreate))
+                .permissionList(Set.of(pRead, pCreate)) // Set (not List)
                 .build();
 
         user = UserEntity.builder()
                 .id(1L)
                 .username("alex")
                 .email("alex@example.com")
-                .password("$2a$10$hash") // hash ficticio
+                .password("$2a$10$hash") // fake hash
                 .isEnabled(true)
                 .accountNonExpired(true)
                 .credentialsNonExpired(true)
@@ -73,7 +72,7 @@ class UserDetailServiceImplTest {
     // ---------- loadUserByUsername ----------
 
     @Test
-    @DisplayName("loadUserByUsername: usuario existe → devuelve UserDetails con roles y permisos")
+    @DisplayName("loadUserByUsername: user exists → returns UserDetails with roles and permissions")
     void loadUserByUsername_ok() {
         when(userRepository.findByEmail("alex@example.com")).thenReturn(Optional.of(user));
 
@@ -88,7 +87,7 @@ class UserDetailServiceImplTest {
     }
 
     @Test
-    @DisplayName("loadUserByUsername: usuario no existe → UsernameNotFoundException")
+    @DisplayName("loadUserByUsername: user not found → UsernameNotFoundException")
     void loadUserByUsername_notFound() {
         when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
         assertThrows(org.springframework.security.core.userdetails.UsernameNotFoundException.class,
@@ -98,7 +97,7 @@ class UserDetailServiceImplTest {
     // ---------- authenticate + loginUser ----------
 
     @Test
-    @DisplayName("loginUser: email/password en blanco → BadRequestException")
+    @DisplayName("loginUser: blank email/password → BadRequestException")
     void login_blank() {
         assertThrows(BadRequestException.class,
                 () -> service.loginUser(new AuthLoginRequest(" ", "pwd")));
@@ -111,7 +110,7 @@ class UserDetailServiceImplTest {
     }
 
     @Test
-    @DisplayName("loginUser: credenciales incorrectas → BadCredentialsException")
+    @DisplayName("loginUser: wrong credentials → BadCredentialsException")
     void login_badCredentials() {
         when(userRepository.findByEmail("alex@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("badpwd", user.getPassword())).thenReturn(false);
@@ -125,7 +124,7 @@ class UserDetailServiceImplTest {
     }
 
     @Test
-    @DisplayName("loginUser: OK → genera token y setea SecurityContext")
+    @DisplayName("loginUser: OK → issues JWT and sets SecurityContext (AuthResponse.username = email)")
     void login_ok() {
         when(userRepository.findByEmail("alex@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret123", user.getPassword())).thenReturn(true);
@@ -133,9 +132,9 @@ class UserDetailServiceImplTest {
 
         AuthResponse res = service.loginUser(new AuthLoginRequest("  alex@example.com ", "secret123"));
 
-        assertEquals("alex@example.com", res.email());
-        assertEquals("jwt-token", res.accessToken());
-        assertTrue(res.success());
+        assertEquals("alex@example.com", res.username()); // service returns email in username
+        assertEquals("jwt-token", res.jwt());
+        assertTrue(res.status());
         assertNotNull(SecurityContextHolder.getContext().getAuthentication());
         verify(jwtUtils).createToken(any());
     }
@@ -143,7 +142,7 @@ class UserDetailServiceImplTest {
     // ---------- createUser (register) ----------
 
     @Test
-    @DisplayName("createUser: validaciones de campos en blanco y password corta")
+    @DisplayName("createUser: field validations (blank and short password)")
     void createUser_validations() {
         // username blank
         assertThrows(BadRequestException.class,
@@ -154,21 +153,21 @@ class UserDetailServiceImplTest {
         // password blank
         assertThrows(BadRequestException.class,
                 () -> service.createUser(new AuthCreateUserRequest("alex", "a@a.com", " ")));
-        // password corta
+        // short password
         assertThrows(BadRequestException.class,
                 () -> service.createUser(new AuthCreateUserRequest("alex", "a@a.com", "short")));
     }
 
     @Test
-    @DisplayName("createUser: username/email duplicados → ConflictException")
+    @DisplayName("createUser: duplicate username/email → ConflictException")
     void createUser_duplicates() {
-        when(roleRepository.findByRoleEnum(RoleEnum.USER)).thenReturn(Optional.of(roleUser));
-
+        // username duplicate
         when(userRepository.existsByUsername("alex")).thenReturn(true);
         assertThrows(ConflictException.class,
                 () -> service.createUser(new AuthCreateUserRequest("alex", "a@a.com", "12345678")));
         verify(userRepository).existsByUsername("alex");
 
+        // email duplicate
         when(userRepository.existsByUsername("alex")).thenReturn(false);
         when(userRepository.existsByEmail("a@a.com")).thenReturn(true);
         assertThrows(ConflictException.class,
@@ -177,7 +176,7 @@ class UserDetailServiceImplTest {
     }
 
     @Test
-    @DisplayName("createUser: ROLE_USER no existe → IllegalStateException")
+    @DisplayName("createUser: missing ROLE_USER → IllegalStateException")
     void createUser_roleMissing() {
         when(userRepository.existsByUsername("alex")).thenReturn(false);
         when(userRepository.existsByEmail("a@a.com")).thenReturn(false);
@@ -188,13 +187,13 @@ class UserDetailServiceImplTest {
     }
 
     @Test
-    @DisplayName("createUser: OK → guarda usuario, codifica password y emite JWT")
+    @DisplayName("createUser: OK → saves user, encodes password, issues JWT (AuthResponse.username = email)")
     void createUser_ok() {
         when(userRepository.existsByUsername("alex")).thenReturn(false);
         when(userRepository.existsByEmail("a@a.com")).thenReturn(false);
         when(roleRepository.findByRoleEnum(RoleEnum.USER)).thenReturn(Optional.of(roleUser));
         when(passwordEncoder.encode("12345678")).thenReturn("$encoded");
-        // El repositorio devuelve el usuario “creado” con id
+
         ArgumentCaptor<UserEntity> toSave = ArgumentCaptor.forClass(UserEntity.class);
         when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> {
             UserEntity e = inv.getArgument(0);
@@ -210,11 +209,13 @@ class UserDetailServiceImplTest {
         assertEquals("alex", saved.getUsername());
         assertEquals("a@a.com", saved.getEmail());
         assertEquals("$encoded", saved.getPassword());
-        assertNotNull(saved.getRoles());
         assertTrue(saved.getRoles().stream().anyMatch(r -> r.getRoleEnum() == RoleEnum.USER));
 
-        assertEquals("a@a.com", res.email());
-        assertEquals("new-jwt", res.accessToken());
-        assertTrue(res.success());
+        assertEquals("a@a.com", res.username()); // service returns email here
+        assertEquals("new-jwt", res.jwt());
+        assertTrue(res.status());
     }
 }
+
+
+

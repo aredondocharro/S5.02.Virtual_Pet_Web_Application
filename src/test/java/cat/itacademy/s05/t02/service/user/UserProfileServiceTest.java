@@ -77,7 +77,7 @@ class UserProfileServiceTest {
     void update_notFound() {
         when(users.findByEmail("missing@example.com")).thenReturn(Optional.empty());
         assertThrows(NotFoundException.class,
-                () -> service.updateMe("missing@example.com", new UserProfileUpdateRequest()));
+                () -> service.updateMe("missing@example.com", new UserProfileUpdateRequest(null, null, null)));
     }
 
     @Test
@@ -86,8 +86,7 @@ class UserProfileServiceTest {
         var u = makeUser();
         when(users.findByEmail("alex@example.com")).thenReturn(Optional.of(u));
 
-        var req = new UserProfileUpdateRequest();
-        req.setUsername("   "); // explícitamente en blanco
+        var req = new UserProfileUpdateRequest("   ", null, null); // explícitamente en blanco
 
         assertThrows(BadRequestException.class, () -> service.updateMe("alex@example.com", req));
     }
@@ -99,8 +98,7 @@ class UserProfileServiceTest {
         when(users.findByEmail("alex@example.com")).thenReturn(Optional.of(u));
         when(users.existsByUsername("newname")).thenReturn(true);
 
-        var req = new UserProfileUpdateRequest();
-        req.setUsername("newname");
+        var req = new UserProfileUpdateRequest("newname", null, null);
 
         assertThrows(ConflictException.class, () -> service.updateMe("alex@example.com", req));
     }
@@ -111,8 +109,7 @@ class UserProfileServiceTest {
         var u = makeUser();
         when(users.findByEmail("alex@example.com")).thenReturn(Optional.of(u));
 
-        var req = new UserProfileUpdateRequest();
-        req.setAvatarUrl("   ");
+        var req = new UserProfileUpdateRequest(null, null, "   ");
 
         assertThrows(BadRequestException.class, () -> service.updateMe("alex@example.com", req));
     }
@@ -122,12 +119,9 @@ class UserProfileServiceTest {
     void update_ok() {
         var u = makeUser();
         when(users.findByEmail("alex@example.com")).thenReturn(Optional.of(u));
-        when(users.existsByUsername("alex")).thenReturn(false); // mismo nombre → no consulta realmente, pero no molesta
+        when(users.existsByUsername("alex-new")).thenReturn(false);
 
-        var req = new UserProfileUpdateRequest();
-        req.setUsername("  alex-new  ");
-        req.setBio("  New bio  ");
-        req.setAvatarUrl("  http://new-img  ");
+        var req = new UserProfileUpdateRequest("  alex-new  ", "  New bio  ", "  http://new-img  ");
 
         UserProfileResponse res = service.updateMe("alex@example.com", req);
 
@@ -135,13 +129,11 @@ class UserProfileServiceTest {
         assertEquals("http://new-img", res.avatarUrl());
         assertEquals("New bio", res.bio());
 
-        // Comprobación sobre la entidad mutada
+        // entidad mutada
         assertEquals("alex-new", u.getUsername());
         assertEquals("http://new-img", u.getAvatarUrl());
         assertEquals("New bio", u.getBio());
 
         verify(users).findByEmail("alex@example.com");
-        // No se llama a save() porque la clase no lo hace (gestión por @Transactional + dirty checking),
-        // así que no verificamos users.save(...)
     }
 }

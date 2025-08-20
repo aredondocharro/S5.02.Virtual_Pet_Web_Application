@@ -105,32 +105,34 @@ public class PetServiceImpl {
     }
 
     public ActionResultResponse applyAction(Long petId, String email, PetActionRequest request, boolean isAdmin) {
-        if (request == null || request.getAction() == null) {
+        if (request == null || request.action() == null) {
             throw new BadRequestException("Action is required");
         }
 
-        // Owner-scope lookup when not admin
         PetEntity pet = isAdmin
                 ? pets.findById(petId).orElseThrow(() -> new NotFoundException("Pet not found"))
                 : pets.findByIdAndOwnerEmail(petId, email)
                 .orElseThrow(() -> new NotFoundException("Pet not found or not owned by user"));
 
         log.debug("Applying action {} to pet id={} by '{}' (admin={})",
-                request.getAction(), petId, email, isAdmin);
+                request.action(), petId, email, isAdmin);
 
-        var result = PetRules.apply(pet, request.getAction());
+        var result = PetRules.apply(pet, request.action());
         pets.save(pet);
 
-        var res = new ActionResultResponse();
-        res.setPet(PetMapper.toResponse(pet));
-        res.setXpGained(result.xpGained);
-        res.setMessage(result.message);
+        ActionResultResponse res = new ActionResultResponse(
+                PetMapper.toResponse(pet),
+                result.message(),
+                result.xpGained()
+        );
 
         log.info("Action {} applied to pet id={} by '{}' (admin={}), xpGained={}, level={}, stage={}",
-                request.getAction(), petId, email, isAdmin, result.xpGained, pet.getLevel(), pet.getStage());
+                request.action(), petId, email, isAdmin, result.xpGained(), pet.getLevel(), pet.getStage());
+
         return res;
     }
 }
+
 
 
 

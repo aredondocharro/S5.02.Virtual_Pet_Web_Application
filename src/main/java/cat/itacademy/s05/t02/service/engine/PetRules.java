@@ -6,14 +6,12 @@ import cat.itacademy.s05.t02.persistence.entity.PetEntity;
 public final class PetRules {
     private PetRules() {}
 
-    public static class Result {
-        public int xpGained;
-        public String message;
-    }
+    public record Result(int xpGained, String message) {}
 
     public static Result apply(PetEntity pet, PetAction action) {
-        Result r = new Result();
         int beforeLevel = pet.getLevel();
+        int gained = 0;
+        String message = "";
 
         switch (action) {
             case FEED -> {
@@ -22,8 +20,8 @@ public final class PetRules {
                 pet.setStamina(inc(pet.getStamina(), 5));
                 pet.setHappiness(inc(pet.getHappiness(), 5));
                 addXp(pet, xp);
-                r.xpGained = xp;
-                r.message = "Fed: Hunger -30, Stamina +5, Happiness +5.";
+                gained = xp;
+                message = "Fed: Hunger -30, Stamina +5, Happiness +5.";
             }
             case PLAY -> {
                 boolean lowStamina = pet.getStamina() < 20;
@@ -34,8 +32,8 @@ public final class PetRules {
                 pet.setStamina(dec(pet.getStamina(), 20));
                 pet.setHunger(inc(pet.getHunger(), hung));
                 addXp(pet, xp);
-                r.xpGained = xp;
-                r.message = lowStamina
+                gained = xp;
+                message = lowStamina
                         ? "Played (tired): Happiness +8, Stamina -20, Hunger +15."
                         : "Played: Happiness +15, Stamina -20, Hunger +10.";
             }
@@ -46,8 +44,8 @@ public final class PetRules {
                 pet.setHunger(inc(pet.getHunger(), 20));
                 pet.setHappiness(inc(pet.getHappiness(), 5));
                 addXp(pet, xp);
-                r.xpGained = xp;
-                r.message = lowStamina
+                gained = xp;
+                message = lowStamina
                         ? "Training (tired): XP +15, Stamina -30, Hunger +20, Happiness +5."
                         : "Training: XP +25, Stamina -30, Hunger +20, Happiness +5.";
             }
@@ -56,8 +54,8 @@ public final class PetRules {
                 pet.setStamina(inc(pet.getStamina(), 30));
                 pet.setHunger(inc(pet.getHunger(), 10));
                 if (wasExhausted) pet.setHappiness(inc(pet.getHappiness(), 5));
-                r.xpGained = 0;
-                r.message = wasExhausted
+                gained = 0;
+                message = wasExhausted
                         ? "Rested well: Stamina +30, Hunger +10, Happiness +5."
                         : "Rested: Stamina +30, Hunger +10.";
             }
@@ -66,7 +64,7 @@ public final class PetRules {
         if (pet.getLevel() != beforeLevel) {
             pet.recalcStage();
         }
-        return r;
+        return new Result(gained, message);
     }
 
     private static int clamp(int v) { return Math.max(0, Math.min(100, v)); }
@@ -88,3 +86,4 @@ public final class PetRules {
         }
     }
 }
+

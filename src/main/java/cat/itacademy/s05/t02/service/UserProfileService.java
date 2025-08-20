@@ -33,7 +33,7 @@ public class UserProfileService {
     }
 
     public UserProfileResponse updateMe(String email, UserProfileUpdateRequest req) {
-        log.debug("Updating profile for user='{}' (username='{}')", email, req != null ? req.getUsername() : null);
+        log.debug("Updating profile for user='{}' (username='{}')", email, req != null ? req.username() : null);
 
         if (req == null) {
             throw new BadRequestException("Update payload is required");
@@ -42,9 +42,9 @@ public class UserProfileService {
         UserEntity u = users.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("User not found: " + email));
 
-        // username (opcional)
-        if (req.getUsername() != null) {
-            String newUsername = req.getUsername().trim();
+        // username (optional)
+        if (req.username() != null) {
+            String newUsername = req.username().trim();
             if (!StringUtils.hasText(newUsername)) {
                 throw new BadRequestException("Username must not be blank");
             }
@@ -55,13 +55,14 @@ public class UserProfileService {
             u.setUsername(newUsername);
         }
 
-        if (req.getBio() != null) {
-            u.setBio(req.getBio().trim());
+
+        if (req.bio() != null) {
+            u.setBio(req.bio().trim());
         }
 
-        // avatarUrl (opcional)
-        if (req.getAvatarUrl() != null) {
-            String newAvatar = req.getAvatarUrl().trim();
+
+        if (req.avatarUrl() != null) {
+            String newAvatar = req.avatarUrl().trim();
             if (newAvatar.isEmpty()) {
                 throw new BadRequestException("Avatar URL must not be blank");
             }
@@ -69,9 +70,9 @@ public class UserProfileService {
         }
 
         log.info("Profile updated for user='{}'", email);
-
         return UserMapper.toProfile(u);
     }
 }
+
 
 

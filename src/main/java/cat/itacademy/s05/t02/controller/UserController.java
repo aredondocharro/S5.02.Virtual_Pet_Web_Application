@@ -45,7 +45,7 @@ public class UserController {
             @RequestBody @Valid UserProfileUpdateRequest req) {
 
         String email = auth.getName();
-        log.info("Profile update requested by user='{}' with new username='{}'", email, req.getUsername());
+        log.info("Profile update requested by user='{}' with new username='{}'", email, req.username());
 
         UserProfileResponse updated = profile.updateMe(email, req);
         log.debug("Profile updated successfully for '{}'", email);

@@ -5,15 +5,14 @@ import cat.itacademy.s05.t02.controller.dto.PetResponse;
 import cat.itacademy.s05.t02.domain.EvolutionStage;
 import cat.itacademy.s05.t02.persistence.entity.PetEntity;
 
-public class PetMapper {
+public final class PetMapper {
 
     private PetMapper() {}
 
-    // Optional: only if somewhere you create from DTO directly
     public static PetEntity toEntityCreate(PetCreateRequest req) {
         return PetEntity.builder()
-                .name(req.getName())
-                .color(req.getColor())
+                .name(req.name())
+                .color(req.color())
                 .hunger(30)
                 .stamina(70)
                 .happiness(60)
@@ -24,19 +23,19 @@ public class PetMapper {
     }
 
     public static PetResponse toResponse(PetEntity e) {
-        PetResponse r = new PetResponse();
-        r.setId(e.getId());
-        r.setName(e.getName());
-        r.setColor(e.getColor());
-        r.setHunger(e.getHunger());
-        r.setStamina(e.getStamina());
-        r.setHappiness(e.getHappiness());
-        r.setLevel(e.getLevel());
-        r.setXpInLevel(e.getXpInLevel());
-        r.setStage(e.getStage());
-        r.setOwnerEmail(e.getOwner() != null ? e.getOwner().getEmail() : null);
-        r.setImageUrl(pickImage(e.getStage()));
-        return r;
+        return new PetResponse(
+                e.getId(),
+                e.getName(),
+                e.getColor(),
+                e.getHunger(),
+                e.getStamina(),
+                e.getHappiness(),
+                e.getLevel(),
+                e.getXpInLevel(),
+                e.getStage(),
+                e.getOwner() != null ? e.getOwner().getEmail() : null,
+                pickImage(e.getStage())
+        );
     }
 
     private static String pickImage(EvolutionStage stage) {
@@ -47,4 +46,5 @@ public class PetMapper {
         };
     }
 }
+
 

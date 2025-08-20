@@ -6,7 +6,6 @@ import cat.itacademy.s05.t02.controller.dto.PetCreateRequest;
 import cat.itacademy.s05.t02.controller.dto.PetResponse;
 import cat.itacademy.s05.t02.controller.dto.PetUpdateRequest;
 import cat.itacademy.s05.t02.controller.mapper.PetMapper;
-import cat.itacademy.s05.t02.exception.BadRequestException;
 import cat.itacademy.s05.t02.persistence.entity.PetEntity;
 import cat.itacademy.s05.t02.service.PetServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
@@ -63,9 +62,9 @@ public class PetController {
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PetResponse> create(@RequestBody @Valid PetCreateRequest req, Authentication auth) {
         String email = auth.getName();
-        log.info("User '{}' requested to create pet: name='{}', color='{}'", email, req.getName(), req.getColor());
+        log.info("User '{}' requested to create pet: name='{}', color='{}'", email, req.name(), req.color());
 
-        PetEntity created = service.create(email, req.getName(), req.getColor());
+        PetEntity created = service.create(email, req.name(), req.color());
         log.debug("Pet created successfully with id={} for owner='{}'", created.getId(), email);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(PetMapper.toResponse(created));
@@ -78,23 +77,11 @@ public class PetController {
             @RequestBody @Valid PetUpdateRequest req,
             Authentication auth) {
 
-        // Optional: guard if the request body carries an id different from the path id
-        try {
-            var method = req.getClass().getMethod("getId");
-            Object bodyId = method.invoke(req);
-            if (bodyId instanceof Long bodyLong && bodyLong != null && !bodyLong.equals(id)) {
-                throw new BadRequestException("Path id and body id do not match");
-            }
-        } catch (NoSuchMethodException ignored) {
-        } catch (Exception reflectionIssue) {
-            log.debug("Could not introspect PetUpdateRequest.getId(): {}", reflectionIssue.getMessage());
-        }
-
         boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
         log.info("User '{}' (admin={}) updating pet id={} hunger={} happiness={}",
-                auth.getName(), isAdmin, id, req.getHunger(), req.getHappiness());
+                auth.getName(), isAdmin, id, req.hunger(), req.happiness());
 
-        PetEntity updated = service.updateMyPet(auth.getName(), isAdmin, id, req.getHunger(), req.getHappiness());
+        PetEntity updated = service.updateMyPet(auth.getName(), isAdmin, id, req.hunger(), req.happiness());
         log.debug("Pet id={} updated successfully by user='{}'", id, auth.getName());
 
         return ResponseEntity.ok(PetMapper.toResponse(updated));
@@ -160,7 +147,7 @@ public class PetController {
 
         String email = auth.getName();
         boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        log.info("Action {} requested by '{}' on pet id={} (admin={})", request.getAction(), email, id, isAdmin);
+        log.info("Action {} requested by '{}' on pet id={} (admin={})", request.action(), email, id, isAdmin);
 
         return service.applyAction(id, email, request, isAdmin);
     }
@@ -177,6 +164,7 @@ public class PetController {
         return ResponseEntity.noContent().build();
     }
 }
+
 
 
 
