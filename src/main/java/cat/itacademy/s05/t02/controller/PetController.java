@@ -8,7 +8,7 @@ import cat.itacademy.s05.t02.controller.dto.PetUpdateRequest;
 import cat.itacademy.s05.t02.controller.mapper.PetMapper;
 import cat.itacademy.s05.t02.exception.BadRequestException;
 import cat.itacademy.s05.t02.persistence.entity.PetEntity;
-import cat.itacademy.s05.t02.service.PetService;
+import cat.itacademy.s05.t02.service.PetServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -39,9 +39,9 @@ import java.util.List;
 @SecurityRequirement(name = "bearerAuth")
 public class PetController {
 
-    private final PetService service;
+    private final PetServiceImpl service;
 
-    public PetController(PetService service) {
+    public PetController(PetServiceImpl service) {
         this.service = service;
     }
 

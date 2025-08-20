@@ -22,12 +22,12 @@ import java.util.List;
 @Service
 @Transactional
 @Slf4j
-public class PetService {
+public class PetServiceImpl {
 
     private final PetRepository pets;
     private final UserRepository users;
 
-    public PetService(PetRepository pets, UserRepository users) {
+    public PetServiceImpl(PetRepository pets, UserRepository users) {
         this.pets = pets;
         this.users = users;
     }
@@ -53,10 +53,9 @@ public class PetService {
         PetEntity p = PetEntity.builder()
                 .name(name.trim())
                 .color(color.trim())
-                // Initial balanced stats
-                .hunger(30)        // 0=satiated, 100=very hungry
-                .stamina(70)       // 0=exhausted, 100=full energy
-                .happiness(60)     // 0=unhappy, 100=very happy
+                .hunger(30)
+                .stamina(70)
+                .happiness(60)
                 .level(1)
                 .xpInLevel(0)
                 .stage(EvolutionStage.BABY)
@@ -68,10 +67,6 @@ public class PetService {
         return saved;
     }
 
-    /**
-     * Optional manual update (keep for ADMIN/tools).
-     * If your UI moves fully to action-based updates, you can deprecate this.
-     */
     public PetEntity updateMyPet(String email, boolean isAdmin, Long id, int hunger, int happiness) {
         log.debug("Updating pet id={} by '{}' (admin={}) hunger={} happiness={}",
                 id, email, isAdmin, hunger, happiness);
@@ -109,7 +104,6 @@ public class PetService {
         log.info("Pet id={} deleted by '{}'", id, email);
     }
 
-    /** Apply game action (FEED/PLAY/TRAIN/REST) with XP/level/evolution logic. */
     public ActionResultResponse applyAction(Long petId, String email, PetActionRequest request, boolean isAdmin) {
         if (request == null || request.getAction() == null) {
             throw new BadRequestException("Action is required");
