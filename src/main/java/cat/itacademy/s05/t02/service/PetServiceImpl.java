@@ -13,6 +13,9 @@ import cat.itacademy.s05.t02.persistence.repository.PetRepository;
 import cat.itacademy.s05.t02.persistence.repository.UserRepository;
 import cat.itacademy.s05.t02.service.engine.PetRules;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -33,6 +36,10 @@ public class PetServiceImpl {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(
+            value = "petsByOwner",
+            key = "#isAdmin ? 'ADMIN_ALL' : #email"
+    )
     public List<PetEntity> listMine(String email, boolean isAdmin) {
         log.debug("Listing pets for user='{}' (admin={})", email, isAdmin);
         List<PetEntity> result = isAdmin ? pets.findAll() : pets.findByOwnerEmail(email);
@@ -40,7 +47,11 @@ public class PetServiceImpl {
         return result;
     }
 
-    /** Create with new default stats (game-ready). */
+    // Evict SIEMPRE la vista del owner y la global de admin
+    @Caching(evict = {
+            @CacheEvict(value = "petsByOwner", key = "#email"),
+            @CacheEvict(value = "petsByOwner", key = "'ADMIN_ALL'")
+    })
     public PetEntity create(String email, String name, String color) {
         log.debug("Creating pet for owner='{}' name='{}' color='{}'", email, name, color);
 
@@ -67,6 +78,10 @@ public class PetServiceImpl {
         return saved;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "petsByOwner", key = "#isAdmin ? 'ADMIN_ALL' : #email"),
+            @CacheEvict(value = "petsByOwner", key = "'ADMIN_ALL'")
+    })
     public PetEntity updateMyPet(String email, boolean isAdmin, Long id, int hunger, int happiness) {
         log.debug("Updating pet id={} by '{}' (admin={}) hunger={} happiness={}",
                 id, email, isAdmin, hunger, happiness);
@@ -89,6 +104,10 @@ public class PetServiceImpl {
         return updated;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "petsByOwner", key = "#isAdmin ? 'ADMIN_ALL' : #email"),
+            @CacheEvict(value = "petsByOwner", key = "'ADMIN_ALL'")
+    })
     public void deleteMyPet(String email, boolean isAdmin, Long id) {
         log.warn("Delete requested for pet id={} by '{}' (admin={})", id, email, isAdmin);
 
@@ -104,6 +123,10 @@ public class PetServiceImpl {
         log.info("Pet id={} deleted by '{}'", id, email);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "petsByOwner", key = "#isAdmin ? 'ADMIN_ALL' : #email"),
+            @CacheEvict(value = "petsByOwner", key = "'ADMIN_ALL'")
+    })
     public ActionResultResponse applyAction(Long petId, String email, PetActionRequest request, boolean isAdmin) {
         if (request == null || request.action() == null) {
             throw new BadRequestException("Action is required");
@@ -132,6 +155,8 @@ public class PetServiceImpl {
         return res;
     }
 }
+
+
 
 
 

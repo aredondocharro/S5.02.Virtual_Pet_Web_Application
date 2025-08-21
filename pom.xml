@@ -110,6 +110,18 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!--Cache Dependencies-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+			<version>3.1.8</version>
+		</dependency>
+
 		<!-- H2 Database for Testing -->
 		<dependency>
 			<groupId>com.h2database</groupId>
