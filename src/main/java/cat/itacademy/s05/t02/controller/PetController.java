@@ -163,6 +163,17 @@ public class PetController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(summary = "Get pet by ID", description = "USER: only his/her pets. ADMIN: any pet.")
+    @GetMapping("/{id}")
+    public ResponseEntity<PetResponse> getOne(@PathVariable Long id, Authentication auth) {
+        String email = auth.getName();
+        boolean isAdmin = auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        log.debug("User '{}' (admin={}) requested pet id={}", email, isAdmin, id);
+
+        PetEntity pet = service.getMyPetById(email, isAdmin, id);
+        return ResponseEntity.ok(PetMapper.toResponse(pet));
+    }
 }
 
 

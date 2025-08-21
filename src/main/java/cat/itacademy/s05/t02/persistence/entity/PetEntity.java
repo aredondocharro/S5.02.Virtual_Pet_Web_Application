@@ -17,12 +17,12 @@ public class PetEntity {
     @Column(nullable = false) private String name;
     @Column(nullable = false) private String color;
 
-    // Core stats (0..100)
-    @Column(nullable = false) private int hunger;      // 0 = satiated, 100 = very hungry
-    @Column(nullable = false) private int stamina;     // 0 = exhausted, 100 = full energy
-    @Column(nullable = false) private int happiness;   // 0 = unhappy, 100 = very happy
 
-    // Progression
+    @Column(nullable = false) private int hunger;
+    @Column(nullable = false) private int stamina;
+    @Column(nullable = false) private int happiness;
+
+
     @Column(nullable = false) private int level;       // 1..15
     @Column(nullable = false) private int xpInLevel;   // 0..100
 
@@ -30,12 +30,11 @@ public class PetEntity {
     @Column(nullable = false, length = 10)
     private EvolutionStage stage;                      // BABY / TEEN / ADULT
 
-    // Ownership
+
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
     private UserEntity owner;
 
-    // Audit
     @CreationTimestamp
     @Column(updatable = false)
     private Instant createdAt;

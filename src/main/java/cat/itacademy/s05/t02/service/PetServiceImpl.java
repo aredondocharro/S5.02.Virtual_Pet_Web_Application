@@ -47,7 +47,6 @@ public class PetServiceImpl {
         return result;
     }
 
-    // Evict SIEMPRE la vista del owner y la global de admin
     @Caching(evict = {
             @CacheEvict(value = "petsByOwner", key = "#email"),
             @CacheEvict(value = "petsByOwner", key = "'ADMIN_ALL'")
@@ -153,6 +152,15 @@ public class PetServiceImpl {
                 request.action(), petId, email, isAdmin, result.xpGained(), pet.getLevel(), pet.getStage());
 
         return res;
+    }
+    public PetEntity getMyPetById(String email, boolean isAdmin, Long id) {
+        PetEntity pet = pets.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pet not found: " + id));
+
+        if (!isAdmin && !pet.getOwner().getEmail().equalsIgnoreCase(email)) {
+            throw new ForbiddenException("You cannot access this pet");
+        }
+        return pet;
     }
 }
 

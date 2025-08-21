@@ -24,6 +24,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -41,44 +46,38 @@ public class SecurityConfig {
     };
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            AuthenticationProvider authenticationProvider) throws Exception {
+
         log.info("Configuring HTTP security: stateless + JWT filter");
 
-        SecurityFilterChain chain = http
+        http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
 
                 .authorizeHttpRequests(auth -> auth
-                        // public
+                        .requestMatchers("/", "/index.html", "/assets/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers(SWAGGER_WHITELIST).permitAll()
                         .requestMatchers("/error").permitAll()
-
-                        // demo endpoints under /app/*
-                        .requestMatchers(HttpMethod.GET, "/app/get").hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/app/post").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/app/put").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/app/delete").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/app/patch").hasRole("ADMIN")
-
-                        // everything else
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )
-
-                // unified JSON for 401/403
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new JsonAuthenticationEntryPoint(new ObjectMapper()))
                         .accessDeniedHandler(new JsonAccessDeniedHandler(new ObjectMapper()))
                 )
 
-                // JWT validator before UsernamePasswordAuthenticationFilter
-                .addFilterBefore(new JwtTokenValidator(jwtUtils), UsernamePasswordAuthenticationFilter.class)
-                .build();
+                .authenticationProvider(authenticationProvider)
+
+                .addFilterBefore(new JwtTokenValidator(jwtUtils), UsernamePasswordAuthenticationFilter.class);
 
         log.info("Security filter chain built. JWT validator registered before UsernamePasswordAuthenticationFilter");
-        return chain;
+        return http.build();
     }
 
     @Bean
@@ -102,7 +101,22 @@ public class SecurityConfig {
         log.debug("PasswordEncoder bean (BCrypt) created");
         return new BCryptPasswordEncoder();
     }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration cors = new CorsConfiguration();
+        cors.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://127.0.0.1:5173"));
+        cors.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        cors.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
+        cors.setExposedHeaders(List.of("Authorization"));
+        cors.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cors);
+        return source;
+    }
 }
+
 
 
 

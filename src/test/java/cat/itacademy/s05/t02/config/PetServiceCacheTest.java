@@ -38,13 +38,10 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("test")
 class PetServiceCacheTest {
 
-    // ====== Mocks de repos ======
     @MockBean PetRepository petRepository;
     @MockBean UserRepository userRepository;
 
-    // @MockBean cat.itacademy.s05.t02.controller.PetController petController;
 
-    // ====== Beans reales (inyectados desde nuestra mini-app de test) ======
     @Autowired
     @Qualifier("testCacheManager")
     CacheManager cacheManager;
@@ -63,10 +60,10 @@ class PetServiceCacheTest {
             DataSourceAutoConfiguration.class,
             HibernateJpaAutoConfiguration.class,
             JpaRepositoriesAutoConfiguration.class
-            // añade más excludes si tu proyecto auto-configura otras cosas que no necesitas en este test
+
     })
     static class TestBootConfig {
-        // Anidamos una TestConfiguration para separar claramente los beans de caché/servicio
+
         @TestConfiguration
         @EnableCaching
         static class TestConfig {
@@ -120,7 +117,7 @@ class PetServiceCacheTest {
     // ===== Tests =====
 
     @Test
-    @DisplayName("listMine cachea por email y evita segundo hit al repo")
+    @DisplayName("listMine caches by email and prevents second hit to the repo")
     void listMine_caches_by_email() {
         String email = "user@example.com";
         UserEntity u = owner(email);
@@ -136,7 +133,7 @@ class PetServiceCacheTest {
     }
 
     @Test
-    @DisplayName("create invalida cache del owner y ADMIN_ALL")
+    @DisplayName("create invalidates owner and ADMIN_ALL cache")
     void create_evicts_owner_and_admin_cache() {
         String email = "user@example.com";
         UserEntity u = owner(email);
@@ -158,7 +155,7 @@ class PetServiceCacheTest {
     }
 
     @Test
-    @DisplayName("updateMyPet invalida y fuerza nueva consulta")
+    @DisplayName("updateMyPet invalidates and forces new query")
     void update_evicts_and_reload() {
         String email = "user@example.com";
         UserEntity u = owner(email);
@@ -177,7 +174,7 @@ class PetServiceCacheTest {
     }
 
     @Test
-    @DisplayName("deleteMyPet invalida y fuerza recarga")
+    @DisplayName("deleteMyPet invalidates and forces reload")
     void delete_evicts_and_reload() {
         String email = "user@example.com";
         UserEntity u = owner(email);
