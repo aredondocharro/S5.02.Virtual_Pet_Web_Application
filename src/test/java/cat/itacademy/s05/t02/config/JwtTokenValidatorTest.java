@@ -16,9 +16,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -171,8 +169,8 @@ class JwtTokenValidatorTest {
 
 
     @Test
-    @DisplayName("Invalid token (validateToken throws) → propagates JWTVerificationException and does NOT call chain")
-    void invalidToken_propagates() throws Exception {
+    @DisplayName("Invalid token (validateToken throws) → throws AuthenticationException and does NOT call chain")
+    void invalidToken_throwsAuthException() throws Exception {
         JwtUtils jwtUtils = mock(JwtUtils.class);
         JwtTokenValidator filter = new JwtTokenValidator(jwtUtils);
 
@@ -183,13 +181,16 @@ class JwtTokenValidatorTest {
 
         when(jwtUtils.validateToken("BAD")).thenThrow(new JWTVerificationException("Invalid"));
 
-        assertThrows(JWTVerificationException.class, () -> filter.doFilter(req, res, chain));
+        assertThrows(org.springframework.security.authentication.BadCredentialsException.class,
+                () -> filter.doFilter(req, res, chain));
+
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(chain, never()).doFilter(any(), any());
     }
 
+
     @Test
-    @DisplayName("Token missing subject (sub) → throws JWTVerificationException")
+    @DisplayName("Token missing subject (sub) → throws AuthenticationException")
     void missingSubject_throws() throws Exception {
         JwtUtils jwtUtils = mock(JwtUtils.class);
         JwtTokenValidator filter = new JwtTokenValidator(jwtUtils);
@@ -202,12 +203,15 @@ class JwtTokenValidatorTest {
         DecodedJWT decoded = mock(DecodedJWT.class);
         when(jwtUtils.validateToken("VALID")).thenReturn(decoded);
         when(jwtUtils.extractUsername(decoded)).thenReturn("   "); // blank
-        when(decoded.getClaim("authorities")).thenReturn(FakeClaim.nullClaim()); // tests 'claim.isNull()' branch
+        when(decoded.getClaim("authorities")).thenReturn(FakeClaim.nullClaim());
 
-        assertThrows(JWTVerificationException.class, () -> filter.doFilter(req, res, chain));
+        assertThrows(org.springframework.security.authentication.BadCredentialsException.class,
+                () -> filter.doFilter(req, res, chain));
+
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         verify(chain, never()).doFilter(any(), any());
     }
+
 
     @Test
     @DisplayName("Does not overwrite context if already authenticated")

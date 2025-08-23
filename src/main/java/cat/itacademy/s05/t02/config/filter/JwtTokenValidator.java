@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -94,13 +95,15 @@ public class JwtTokenValidator extends OncePerRequestFilter {
                     .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
                     .toList();
 
-            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+            // ⬇️ CLAVE: reemplazar anónimo/ausente por autenticación con JWT
+            var current = SecurityContextHolder.getContext().getAuthentication();
+            if (current == null || current instanceof AnonymousAuthenticationToken || !current.isAuthenticated()) {
                 var authentication = new UsernamePasswordAuthenticationToken(username, null, authorities);
-                var context = SecurityContextHolder.createEmptyContext();
-                context.setAuthentication(authentication);
-                SecurityContextHolder.setContext(context);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("SecurityContext authentication set for sub='{}'", username);
             } else {
-                log.debug("Authentication already present in context for path='{}', skipping set.", path);
+                log.debug("Authentication already present ({}), keeping it. path='{}'",
+                        current.getClass().getSimpleName(), path);
             }
 
             log.info("JWT valid: sub='{}' jti='{}' authorities={} path='{}'",
@@ -120,6 +123,7 @@ public class JwtTokenValidator extends OncePerRequestFilter {
         }
     }
 }
+
 
 
 

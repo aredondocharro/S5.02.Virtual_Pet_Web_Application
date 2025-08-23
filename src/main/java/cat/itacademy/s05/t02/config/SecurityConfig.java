@@ -23,7 +23,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+// ✅ Posicionaremos el JWT validator DESPUÉS de ExceptionTranslationFilter
+import org.springframework.security.web.access.ExceptionTranslationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -48,7 +49,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            AuthenticationProvider authenticationProvider) throws Exception {
+            AuthenticationProvider authenticationProvider,
+            // ✅ inyectamos el ObjectMapper ya configurado por Spring (con JavaTimeModule)
+            ObjectMapper objectMapper
+    ) throws Exception {
 
         log.info("Configuring HTTP security: stateless + JWT filter");
 
@@ -68,15 +72,18 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(new JsonAuthenticationEntryPoint(new ObjectMapper()))
-                        .accessDeniedHandler(new JsonAccessDeniedHandler(new ObjectMapper()))
+                        // ✅ usamos el mapper del contexto (evita el error con Instant)
+                        .authenticationEntryPoint(new JsonAuthenticationEntryPoint(objectMapper))
+                        .accessDeniedHandler(new JsonAccessDeniedHandler(objectMapper))
                 )
 
                 .authenticationProvider(authenticationProvider)
 
-                .addFilterBefore(new JwtTokenValidator(jwtUtils), UsernamePasswordAuthenticationFilter.class);
+                // ✅ Colocamos el validador DESPUÉS del ExceptionTranslationFilter,
+                // quedará entre ExceptionTranslationFilter y AuthorizationFilter.
+                .addFilterAfter(new JwtTokenValidator(jwtUtils), ExceptionTranslationFilter.class);
 
-        log.info("Security filter chain built. JWT validator registered before UsernamePasswordAuthenticationFilter");
+        log.info("Security filter chain built. JWT validator registered after ExceptionTranslationFilter");
         return http.build();
     }
 
@@ -116,6 +123,7 @@ public class SecurityConfig {
         return source;
     }
 }
+
 
 
 
