@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -41,16 +42,19 @@ public class JwtTokenValidator extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
+
         String header = authHeader.trim();
         if (header.length() < BEARER.length() || !header.regionMatches(true, 0, BEARER, 0, BEARER.length())) {
             log.debug("Authorization header present but not Bearer for path='{}'", path);
             chain.doFilter(request, response);
             return;
         }
+
         String jwtToken = header.substring(BEARER.length()).trim();
         if (jwtToken.isEmpty()) {
             log.warn("Empty Bearer token on path='{}'", path);
-            throw new JWTVerificationException("Empty Bearer token");
+            SecurityContextHolder.clearContext();
+            throw new BadCredentialsException("Empty Bearer token");
         }
 
         try {
@@ -83,6 +87,7 @@ public class JwtTokenValidator extends OncePerRequestFilter {
                     log.warn("JWT authorities provided as CSV for sub='{}' (consider issuing array-style claim).", username);
                 }
             }
+
             var uniqueAuthorities = new LinkedHashSet<String>(rawAuthorities);
             var authorities = uniqueAuthorities.stream()
                     .filter(s -> s != null && !s.isBlank())
@@ -105,13 +110,17 @@ public class JwtTokenValidator extends OncePerRequestFilter {
 
         } catch (JWTVerificationException ex) {
             log.warn("Invalid JWT on path='{}': {}", path, ex.getMessage());
-            throw ex;
+            SecurityContextHolder.clearContext();
+            // Traducimos a AuthenticationException para que tu EntryPoint devuelva 401.
+            throw new BadCredentialsException("Invalid or expired token", ex);
         } catch (IllegalArgumentException ex) {
             log.warn("JWT parsing error on path='{}': {}", path, ex.getMessage());
-            throw new JWTVerificationException("Invalid JWT token");
+            SecurityContextHolder.clearContext();
+            throw new BadCredentialsException("Invalid JWT token", ex);
         }
     }
 }
+
 
 
 

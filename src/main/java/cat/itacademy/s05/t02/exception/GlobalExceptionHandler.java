@@ -1,6 +1,7 @@
 package cat.itacademy.s05.t02.exception;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.exceptions.TokenExpiredException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -102,7 +103,12 @@ public class GlobalExceptionHandler {
         log.warn("400 Type mismatch on {} {}: {}", req.getMethod(), req.getRequestURI(), msg);
         return ErrorResponse.of(400, "BAD_REQUEST", msg, req.getRequestURI());
     }
-
+    @ExceptionHandler(TokenExpiredException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ErrorResponse handleJwtExpired(TokenExpiredException ex, HttpServletRequest req) {
+        log.warn("401 JWT expired on {} {}: {}", req.getMethod(), req.getRequestURI(), ex.getMessage());
+        return ErrorResponse.of(401, "UNAUTHORIZED", "JWT_EXPIRED", req.getRequestURI());
+    }
 
     @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
