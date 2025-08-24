@@ -2,6 +2,7 @@ package cat.itacademy.s05.t02.service;
 
 import cat.itacademy.s05.t02.controller.dto.ActionResultResponse;
 import cat.itacademy.s05.t02.controller.dto.PetActionRequest;
+import cat.itacademy.s05.t02.controller.dto.PetResponse; // <-- NEW
 import cat.itacademy.s05.t02.controller.mapper.PetMapper;
 import cat.itacademy.s05.t02.domain.EvolutionStage;
 import cat.itacademy.s05.t02.exception.BadRequestException;
@@ -139,6 +140,10 @@ public class PetServiceImpl {
         log.debug("Applying action {} to pet id={} by '{}' (admin={})",
                 request.action(), petId, email, isAdmin);
 
+        // Precondition check (exhaustion, hunger/energy gates)
+        String deny = PetRules.precondition(pet, request.action());
+        if (deny != null) throw new BadRequestException(deny);
+
         var result = PetRules.apply(pet, request.action());
         pets.save(pet);
 
@@ -153,6 +158,19 @@ public class PetServiceImpl {
 
         return res;
     }
+
+    @Transactional(readOnly = true)
+    public PetResponse getMyPetDtoById(String email, boolean isAdmin, Long id) {
+        PetEntity pet = pets.findById(id)
+                .orElseThrow(() -> new NotFoundException("Pet not found: " + id));
+
+        if (!isAdmin && !pet.getOwner().getEmail().equalsIgnoreCase(email)) {
+            throw new ForbiddenException("You cannot access this pet");
+        }
+        return PetMapper.toResponse(pet); // mapping happens while the tx/session is open
+    }
+
+    @Transactional(readOnly = true)
     public PetEntity getMyPetById(String email, boolean isAdmin, Long id) {
         PetEntity pet = pets.findById(id)
                 .orElseThrow(() -> new NotFoundException("Pet not found: " + id));
@@ -163,6 +181,7 @@ public class PetServiceImpl {
         return pet;
     }
 }
+
 
 
 
