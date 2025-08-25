@@ -1,6 +1,7 @@
 package cat.itacademy.s05.t02.config;
 
 import cat.itacademy.s05.t02.domain.EvolutionStage;
+import cat.itacademy.s05.t02.domain.PetColor;
 import cat.itacademy.s05.t02.exception.NotFoundException;
 import cat.itacademy.s05.t02.persistence.entity.PetEntity;
 import cat.itacademy.s05.t02.persistence.entity.UserEntity;
@@ -103,7 +104,7 @@ class PetServiceCacheTest {
         PetEntity p = new PetEntity();
         p.setId(id);
         p.setName(name);
-        p.setColor("blue");
+        p.setColor(PetColor.WHITE);
         p.setHunger(30);
         p.setStamina(70);
         p.setHappiness(60);
@@ -146,7 +147,7 @@ class PetServiceCacheTest {
         service.listMine(email, false); // seed
         verify(petRepository, times(1)).findByOwnerEmail(email);
 
-        service.create(email, "NewPet", "red"); // evict
+        service.create(email, "NewPet", PetColor.PINK);
 
         when(petRepository.findByOwnerEmail(email)).thenReturn(List.of(saved));
         service.listMine(email, false);

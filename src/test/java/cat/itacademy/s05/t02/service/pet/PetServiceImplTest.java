@@ -4,6 +4,7 @@ import cat.itacademy.s05.t02.controller.dto.ActionResultResponse;
 import cat.itacademy.s05.t02.controller.dto.PetActionRequest;
 import cat.itacademy.s05.t02.domain.EvolutionStage;
 import cat.itacademy.s05.t02.domain.PetAction;
+import cat.itacademy.s05.t02.domain.PetColor;
 import cat.itacademy.s05.t02.exception.BadRequestException;
 import cat.itacademy.s05.t02.exception.ForbiddenException;
 import cat.itacademy.s05.t02.exception.NotFoundException;
@@ -42,7 +43,7 @@ class PetServiceImplTest {
         pet = PetEntity.builder()
                 .id(10L)
                 .name("Axo")
-                .color("pink")
+                .color(PetColor.PINK) // 👈 enum ahora
                 .owner(user)
                 .hunger(50)
                 .stamina(50)
@@ -69,7 +70,7 @@ class PetServiceImplTest {
 
     // ========== create ==========
     @Test
-    @DisplayName("create: ok with defaults; validates name/color")
+    @DisplayName("create: ok with defaults; validates name and non-null color")
     void create_ok_and_validations() {
         when(userRepository.findByEmail("u@x.com")).thenReturn(Optional.of(user));
         when(petRepository.save(any(PetEntity.class))).thenAnswer(inv -> {
@@ -78,8 +79,8 @@ class PetServiceImplTest {
             return p;
         });
 
-        var created = service.create("u@x.com", "Axo", "pink");
-
+        // create OK
+        var created = service.create("u@x.com", "Axo", PetColor.PINK); // 👈 enum
         assertEquals(123L, created.getId());
         assertEquals(30, created.getHunger());
         assertEquals(70, created.getStamina());
@@ -89,15 +90,15 @@ class PetServiceImplTest {
         assertEquals(EvolutionStage.BABY, created.getStage());
 
         // validations
-        assertThrows(BadRequestException.class, () -> service.create("u@x.com", "   ", "pink"));
-        assertThrows(BadRequestException.class, () -> service.create("u@x.com", "Axo", "   "));
+        assertThrows(BadRequestException.class, () -> service.create("u@x.com", "   ", PetColor.PINK));
+        assertThrows(BadRequestException.class, () -> service.create("u@x.com", "Axo", null)); // 👈 color null
     }
 
     @Test
     @DisplayName("create: throws NotFound when user does not exist")
     void create_user_not_found() {
         when(userRepository.findByEmail("no@x.com")).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> service.create("no@x.com", "Axo", "pink"));
+        assertThrows(NotFoundException.class, () -> service.create("no@x.com", "Axo", PetColor.PINK));
         verify(userRepository).findByEmail("no@x.com");
         verifyNoInteractions(petRepository);
     }
@@ -109,6 +110,7 @@ class PetServiceImplTest {
         PetEntity otherOwnersPet = PetEntity.builder()
                 .id(11L)
                 .owner(UserEntity.builder().email("other@x.com").build())
+                .color(PetColor.BLACK) // 👈 evita null
                 .hunger(10).happiness(10)
                 .build();
         when(petRepository.findById(11L)).thenReturn(Optional.of(otherOwnersPet));
@@ -121,7 +123,8 @@ class PetServiceImplTest {
     @DisplayName("updateMyPet (ADMIN): updates correctly")
     void update_admin_ok() {
         PetEntity stored = PetEntity.builder()
-                .id(10L).owner(user).hunger(10).happiness(10).build();
+                .id(10L).owner(user).color(PetColor.WHITE)
+                .hunger(10).happiness(10).build();
         when(petRepository.findById(10L)).thenReturn(Optional.of(stored));
         when(petRepository.save(any(PetEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -146,7 +149,7 @@ class PetServiceImplTest {
     @Test
     @DisplayName("updateMyPet: range validation 0..100")
     void update_range_validation() {
-        // No stubs here to avoid UnnecessaryStubbing: method fails before touching the repo
+        // No stubs: el método falla antes de tocar el repo
         assertThrows(BadRequestException.class, () ->
                 service.updateMyPet("u@x.com", true, 10L, -1, 50));   // invalid hunger
         assertThrows(BadRequestException.class, () ->
@@ -172,6 +175,7 @@ class PetServiceImplTest {
         PetEntity other = PetEntity.builder()
                 .id(11L)
                 .owner(UserEntity.builder().email("other@x.com").build())
+                .color(PetColor.ORANGE)
                 .build();
         when(petRepository.findById(11L)).thenReturn(Optional.of(other));
 
@@ -268,5 +272,6 @@ class PetServiceImplTest {
         verify(petRepository).save(spyPet);
     }
 }
+
 
 

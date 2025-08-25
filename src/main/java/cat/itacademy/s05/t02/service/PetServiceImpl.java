@@ -5,6 +5,7 @@ import cat.itacademy.s05.t02.controller.dto.PetActionRequest;
 import cat.itacademy.s05.t02.controller.dto.PetResponse; // <-- NEW
 import cat.itacademy.s05.t02.controller.mapper.PetMapper;
 import cat.itacademy.s05.t02.domain.EvolutionStage;
+import cat.itacademy.s05.t02.domain.PetColor;
 import cat.itacademy.s05.t02.exception.BadRequestException;
 import cat.itacademy.s05.t02.exception.ForbiddenException;
 import cat.itacademy.s05.t02.exception.NotFoundException;
@@ -52,18 +53,18 @@ public class PetServiceImpl {
             @CacheEvict(value = "petsByOwner", key = "#email"),
             @CacheEvict(value = "petsByOwner", key = "'ADMIN_ALL'")
     })
-    public PetEntity create(String email, String name, String color) {
+    public PetEntity create(String email, String name, PetColor color) {
         log.debug("Creating pet for owner='{}' name='{}' color='{}'", email, name, color);
 
         UserEntity owner = users.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("User not found: " + email));
 
         if (!StringUtils.hasText(name)) throw new BadRequestException("Pet name must not be blank");
-        if (!StringUtils.hasText(color)) throw new BadRequestException("Pet color must not be blank");
+        if (color == null) throw new BadRequestException("Pet color must not be blank");
 
         PetEntity p = PetEntity.builder()
                 .name(name.trim())
-                .color(color.trim())
+                .color(color)
                 .hunger(30)
                 .stamina(70)
                 .happiness(60)
@@ -167,7 +168,7 @@ public class PetServiceImpl {
         if (!isAdmin && !pet.getOwner().getEmail().equalsIgnoreCase(email)) {
             throw new ForbiddenException("You cannot access this pet");
         }
-        return PetMapper.toResponse(pet); // mapping happens while the tx/session is open
+        return PetMapper.toResponse(pet);
     }
 
     @Transactional(readOnly = true)

@@ -1,6 +1,7 @@
 package cat.itacademy.s05.t02.controller.dto;
 
 import cat.itacademy.s05.t02.domain.EvolutionStage;
+import cat.itacademy.s05.t02.domain.PetColor;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Pet data returned by the API")
@@ -13,7 +14,7 @@ public record PetResponse(
         String name,
 
         @Schema(description = "Main color of the pet", example = "pink")
-        String color,
+        PetColor color,
 
         @Schema(description = "Hunger 0..100 (0=satiated, 100=very hungry)", example = "40")
         int hunger,

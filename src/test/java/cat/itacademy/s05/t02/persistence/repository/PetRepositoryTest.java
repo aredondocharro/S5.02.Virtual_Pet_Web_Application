@@ -1,6 +1,7 @@
 package cat.itacademy.s05.t02.persistence.repository;
 
 import cat.itacademy.s05.t02.domain.EvolutionStage;
+import cat.itacademy.s05.t02.domain.PetColor;
 import cat.itacademy.s05.t02.persistence.entity.PetEntity;
 import cat.itacademy.s05.t02.persistence.entity.UserEntity;
 import org.junit.jupiter.api.DisplayName;
@@ -39,7 +40,7 @@ class PetRepositoryTest {
                 .build();
     }
 
-    private PetEntity newPet(String name, String color, UserEntity owner) {
+    private PetEntity newPet(String name, PetColor color, UserEntity owner) {
         return PetEntity.builder()
                 .name(name)
                 .color(color)
@@ -57,7 +58,7 @@ class PetRepositoryTest {
     @DisplayName("findByIdAndOwnerEmail: returns pet when id and owner email match")
     void findByIdAndOwnerEmail_ok() {
         UserEntity u = userRepository.save(newUser("a@b.com"));
-        PetEntity p = petRepository.save(newPet("Axo", "pink", u));
+        PetEntity p = petRepository.save(newPet("Axo", PetColor.BLACK, u));
 
         Optional<PetEntity> found = petRepository.findByIdAndOwnerEmail(p.getId(), "a@b.com");
 
@@ -71,7 +72,7 @@ class PetRepositoryTest {
     void findByIdAndOwnerEmail_wrong_owner() {
         UserEntity u1 = userRepository.save(newUser("a@b.com"));
         UserEntity u2 = userRepository.save(newUser("c@d.com"));
-        PetEntity p = petRepository.save(newPet("Blob", "blue", u1));
+        PetEntity p = petRepository.save(newPet("Blob", PetColor.BLACK, u1));
 
         Optional<PetEntity> found = petRepository.findByIdAndOwnerEmail(p.getId(), "c@d.com");
 
@@ -91,9 +92,9 @@ class PetRepositoryTest {
         UserEntity u1 = userRepository.save(newUser("a@b.com"));
         UserEntity u2 = userRepository.save(newUser("c@d.com"));
 
-        petRepository.save(newPet("Axo", "pink", u1));
-        petRepository.save(newPet("Blob", "blue", u1));
-        petRepository.save(newPet("Zig", "green", u2));
+        petRepository.save(newPet("Axo", PetColor.PINK, u1));
+        petRepository.save(newPet("Blob", PetColor.BLACK, u1));
+        petRepository.save(newPet("Zig", PetColor.ORANGE, u2));
 
         List<PetEntity> petsU1 = petRepository.findByOwnerEmail("a@b.com");
         List<PetEntity> petsU2 = petRepository.findByOwnerEmail("c@d.com");
@@ -108,7 +109,7 @@ class PetRepositoryTest {
     @DisplayName("Saving a pet assigns an ID (identity/sequence generated)")
     void id_is_generated_on_save() {
         UserEntity u = userRepository.save(newUser("a@b.com"));
-        PetEntity saved = petRepository.save(newPet("Axo", "pink", u));
+        PetEntity saved = petRepository.save(newPet("Axo", PetColor.PINK, u));
 
         assertNotNull(saved.getId());
         assertTrue(saved.getId() > 0);

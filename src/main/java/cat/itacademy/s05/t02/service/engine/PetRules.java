@@ -34,10 +34,10 @@ public final class PetRules {
                 if (s < 30) return "Not enough energy to train.";
             }
             case FEED -> {
-                return null; // always allowed unless exhausted
+                return null;
             }
             case REST -> {
-                return null; // always allowed
+                return null;
             }
         }
         return null;

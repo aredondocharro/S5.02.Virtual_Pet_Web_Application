@@ -1,5 +1,6 @@
 package cat.itacademy.s05.t02.controller.dto;
 
+import cat.itacademy.s05.t02.domain.PetColor;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
@@ -10,7 +11,7 @@ public record PetCreateRequest(
         @NotBlank
         String name,
 
-        @Schema(description = "Main colour", example = "blue", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "Main color", example = "blue", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank
-        String color
+        PetColor color
 ) {}

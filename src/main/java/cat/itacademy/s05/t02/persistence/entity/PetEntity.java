@@ -18,7 +18,7 @@ public class PetEntity {
     @Column(nullable = false) private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 16)
     private PetColor color;
 
 
