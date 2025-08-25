@@ -1,0 +1,142 @@
+/* Contenedor de toda la página de perfil */
+.profile-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #000000 url('/backgrounds/profile-bg.webp') center / cover fixed no-repeat;
+  padding: 24px 16px;
+}
+
+.banner {
+  width: 100%;
+  max-width: 900px;
+  height: 220px;                 
+  background-size: cover;        
+  background-position: center;   
+  border-radius: 16px;           /* redondeado en las 4 esquinas */
+  border: 4px solid rgb(0, 0, 0);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+/* Avatar centrado */
+.avatar-container {
+  display: flex;
+  justify-content: center;
+  margin-top: -60px;
+}
+.avatar {
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  border: 4px solid #000000;
+  object-fit: cover; background: #000000;
+  box-shadow: 0 12px 30px rgb(0, 0, 0);
+}
+
+/* --- CARD centrada (tema oscuro + azul) --- */
+.profile-card {
+  width: clamp(320px, 92vw, 720px);
+  margin: 0 auto;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.96), rgb(0, 0, 0));
+  color: #006aff;               /* color de texto por defecto en azul */
+  border-radius: 18px;
+  padding: 26px 24px;
+  text-align: center;
+  border: 1px solid rgba(0,106,255,0.25);
+  box-shadow: 0 10px 25px rgba(2,6,23,0.35), 0 2px 6px rgba(2,6,23,0.2);
+}
+
+/* Títulos y texto */
+.profile-card h2 { 
+  margin: 6px 0 2px; 
+  font-size: 28px; 
+  font-weight: 800; 
+  letter-spacing: .2px; 
+  color: #006aff;
+}
+.email { color: #66aaff; font-size: 14px; }
+.bio   { margin: 14px 0 16px; color: #66aaff; font-style: italic; }
+
+/* Roles */
+.roles { 
+  display: flex; 
+  justify-content: center;
+  gap: 8px; 
+  flex-wrap: wrap; 
+  margin: 4px 0 14px; 
+}
+.role-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px; 
+  font-weight: 700;
+  background: rgba(0,106,255,0.1);
+  color: #0090ff;
+  border: 1px solid #006aff;
+  text-align: center;
+}
+
+/* Subtítulo Roles */
+.roles-label {
+  text-align: center;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #66aaff;
+  font-weight: 500;
+}
+
+/* Botones */
+.buttons {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 16px;
+}
+.buttons button {
+  padding: 10px 14px;
+  border: none; border-radius: 10px;
+  cursor: pointer; font-weight: 700;
+  background: #006aff; color: #fff;
+  box-shadow: 0 6px 16px rgba(2,6,23,.35);
+}
+.buttons button:nth-child(2) {
+  background: transparent; color: #66aaff;
+  border: 1px solid #1f3b66;
+}
+.buttons button:hover { filter: brightness(1.05); }
+
+.loading { text-align: center; margin-top: 50px; font-size: 18px; color: #66aaff; }
+
+/* ====== EDICIÓN: inputs en columna + tema oscuro ====== */
+.edit-form {
+  display: flex;
+  flex-direction: column;     /* uno debajo del otro */
+  gap: 12px;                  /* separación vertical */
+  margin-top: 16px;
+  max-width: 560px;           /* opcional: limita ancho del formulario */
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+
+.edit-form .form-field input,
+.edit-form .form-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #1f3b66;     /* borde azul oscuro */
+  background: #0b0f16;           /* fondo oscuro */
+  color: #d8e9ff;                /* texto claro azulado */
+  font-size: 14px;
+  outline: none;
+}
+
+.edit-form .form-field input::placeholder,
+.edit-form .form-field textarea::placeholder {
+  color: #6fa8ff;                /* placeholder en azul suave */
+}
+
+.edit-form .form-field input:focus,
+.edit-form .form-field textarea:focus {
+  border-color: #2b73ff;
+  box-shadow: 0 0 0 3px rgba(0,106,255,0.25);
+}

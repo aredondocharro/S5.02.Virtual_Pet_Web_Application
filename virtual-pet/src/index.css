@@ -1,0 +1,118 @@
+/* Tailwind v4: se importa así */
+@import "tailwindcss";
+
+/* ==== Variables OKLCH (light / dark) ==== */
+:root {
+  --background: oklch(0.98 0.02 85);
+  --foreground: oklch(0.35 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.35 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.35 0 0);
+  --primary: oklch(0.65 0.18 45);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.7 0.2 330);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.97 0.02 330);
+  --muted-foreground: oklch(0.35 0 0);
+  --accent: oklch(0.7 0.2 330);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.55 0.25 15);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.9 0.01 85);
+  --input: oklch(1 0 0);
+  --ring: oklch(0.7 0.2 330);
+  --radius: 0.5rem;
+}
+
+/* ==== Bubbles ==== */
+
+/* Cada burbuja */
+.bubble {
+  position: absolute;
+  display: block;
+  bottom: -12%; /* un poco más abajo para que nazcan fuera de pantalla */
+  /* aspecto más "vivo": gradiente + borde + glow */
+  background: radial-gradient(circle at 35% 35%,
+              rgba(255,255,255,.95) 0 45%,
+              rgba(255,255,255,.75) 55%,
+              rgba(255,255,255,.45) 70%,
+              rgba(255,255,255,0) 72%);
+  border: 1px solid rgba(255,255,255,.85);
+  border-radius: 9999px;
+  box-shadow:
+    0 0 12px rgba(255,255,255,.55),
+    0 0 28px rgba(156,220,254,.35); /* halo azulado sutil */
+  mix-blend-mode: screen;          /* ilumina sobre fondos oscuros y claros */
+  filter: blur(0.2px);
+  will-change: transform, opacity;
+    pointer-events: none;
+}
+
+/* Recorrido más largo (hasta más allá del top del viewport) */
+@keyframes bubbleUp {
+  0%   { transform: translateY(0)           scale(1);   opacity: 0; }
+  10%  {                                           opacity: .95; }
+  50%  { transform: translateY(-60vh)       scale(1.08); }
+  100% { transform: translateY(-130vh)      scale(1.2);  opacity: 0; }
+}
+
+/* Utilidad para animar (puedes variar duración/vía style inline) */
+@layer utilities {
+  .animate-bubble { animation: bubbleUp 10.5s linear infinite; }
+}
+
+/* (Opcional) Respeta reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-bubble { animation: none; }
+}
+
+.dark {
+  --background: oklch(0.15 0.02 45);
+  --foreground: oklch(0.95 0.01 85);
+  --card: oklch(0.18 0.02 45);
+  --card-foreground: oklch(0.95 0.01 85);
+  --popover: oklch(0.18 0.02 45);
+  --popover-foreground: oklch(0.95 0.01 85);
+  --primary: oklch(0.7 0.2 45);
+  --primary-foreground: oklch(0.15 0.02 45);
+  --secondary: oklch(0.25 0.02 330);
+  --secondary-foreground: oklch(0.95 0.01 85);
+  --muted: oklch(0.25 0.02 330);
+  --muted-foreground: oklch(0.7 0.01 85);
+  --accent: oklch(0.25 0.02 330);
+  --accent-foreground: oklch(0.95 0.01 85);
+  --destructive: oklch(0.45 0.2 15);
+  --destructive-foreground: oklch(0.95 0.01 85);
+  --border: oklch(0.25 0.02 45);
+  --input: oklch(0.25 0.02 45);
+  --ring: oklch(0.5 0.1 330);
+}
+
+@keyframes axofloat {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%  { transform: translate3d(0, -12px, 0) rotate(1deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+}
+
+/* Mapea a variables internas para usarlas en el base */
+@layer base {
+  :root {
+    --twc-bg: var(--background);
+    --twc-fg: var(--foreground);
+    --twc-border: var(--border);
+    --twc-ring: var(--ring);
+  }
+
+  * {
+    border-color: var(--twc-border);
+    outline-color: color-mix(in oklch, var(--twc-ring) 50%, transparent);
+  }
+
+  body {
+    background: var(--twc-bg);
+    color: var(--twc-fg);
+  }
+}
+
+
