@@ -35,10 +35,7 @@ public record PetResponse(
         EvolutionStage stage,
 
         @Schema(description = "Owner email", example = "alex@example.com")
-        String ownerEmail,
-
-        @Schema(description = "Frontend image URL suggestion derived from stage", example = "/img/axolotl_baby.png")
-        String imageUrl
+        String ownerEmail
 ) {}
 
 

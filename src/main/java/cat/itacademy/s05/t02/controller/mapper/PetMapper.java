@@ -33,18 +33,10 @@ public final class PetMapper {
                 e.getLevel(),
                 e.getXpInLevel(),
                 e.getStage(),
-                e.getOwner() != null ? e.getOwner().getEmail() : null,
-                pickImage(e.getStage())
+                e.getOwner() != null ? e.getOwner().getEmail() : null
         );
     }
 
-    private static String pickImage(EvolutionStage stage) {
-        return switch (stage) {
-            case BABY -> "/img/axolotl_baby.png";
-            case TEEN -> "/img/axolotl_teen.png";
-            case ADULT -> "/img/axolotl_adult.png";
-        };
-    }
 }
 
 
