@@ -1,6 +1,7 @@
 package cat.itacademy.s05.t02.persistence.entity;
 
 import cat.itacademy.s05.t02.domain.EvolutionStage;
+import cat.itacademy.s05.t02.domain.PetColor;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -15,7 +16,10 @@ public class PetEntity {
     private Long id;
 
     @Column(nullable = false) private String name;
-    @Column(nullable = false) private String color;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PetColor color;
 
 
     @Column(nullable = false) private int hunger;
@@ -23,12 +27,12 @@ public class PetEntity {
     @Column(nullable = false) private int happiness;
 
 
-    @Column(nullable = false) private int level;       // 1..15
-    @Column(nullable = false) private int xpInLevel;   // 0..100
+    @Column(nullable = false) private int level;
+    @Column(nullable = false) private int xpInLevel;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
-    private EvolutionStage stage;                      // BABY / TEEN / ADULT
+    private EvolutionStage stage;
 
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
